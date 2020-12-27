@@ -1,0 +1,56 @@
+title:              "Javier Conde"
+special_title:      "<span class='special_title'>J</span><span>avier</span> <span class='special_title'> C</span><span>onde</span>"
+description:        "Researcher and Ph.D. at <a href='https://www.upm.es/' target='_blank'> UPM </a> (Universidad Politécnica de Madrid) and member of <a href='http://ging.github.io/' target='_blank'> GING </a> (Grupo de Internet de Nueva Generación)"
+
+url:                "null"
+author:             "javicond3"
+email:              "4b3javi(at)gmail.com"
+twitter:            null
+github:             "javicond3"
+linkedin:           "javier-conde-diaz"
+facebook:           null
+
+
+baseurl:            ""
+permalink:          /:year/:month/:day/:title/
+
+markdown:           kramdown
+
+cv_link:            "https://javicond3.github.io/CV/CV.pdf"
+nav:
+  - name:           "About"
+    href:           "/about"
+  - name:           "CV"
+    href:           "/cv"
+  # - name:           "Projects"
+  #   href:           "/Projects"
+  # - name:           "Education"
+  #   href:           "/education"
+  # - name:           "Interests"
+  #   href:           "/interests"
+  # - name:           "Contact"
+  #   href:           "/contact"
+
+sass:
+  style:            :compressed
+
+
+collections:
+  postsSample:
+    output:         true
+
+defaults:
+  -
+    scope:
+      path:         ""
+      type:         "pages"
+    values:
+      layout:       "page"
+  -
+    scope:
+      path:         ""
+      type:         "postSample"
+    values:
+      layout:       "post"
+
+plugins:
