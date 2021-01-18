@@ -5,14 +5,12 @@ description:        "Researcher and Ph.D. student at <a href='https://www.upm.es
 url:                "null"
 author:             "javicond3"
 email:              "4b3javi(at)gmail.com"
-twitter:            null
+location:           "Madrid, Spain"
 github:             "javicond3"
 linkedin:           "javier-conde-diaz"
-facebook:           null
 
 
 baseurl:            ""
-permalink:          /:year/:month/:day/:title/
 
 markdown:           kramdown
 
@@ -22,8 +20,8 @@ nav:
     href:           "/about"
   - name:           "CV"
     href:           "/cv"
-  # - name:           "Projects"
-  #   href:           "/Projects"
+  - name:           "Projects"
+    href:           "/projects"
   # - name:           "Education"
   #   href:           "/education"
   # - name:           "Interests"
@@ -32,11 +30,11 @@ nav:
   #   href:           "/contact"
 
 sass:
-  style:            :compressed
+  style:            compressed
 
 
 collections:
-  postsSample:
+  projects:
     output:         true
 
 defaults:
@@ -49,8 +47,8 @@ defaults:
   -
     scope:
       path:         ""
-      type:         "postSample"
+      type:         "projects"
     values:
-      layout:       "post"
+      layout:       "project"
 
 plugins:

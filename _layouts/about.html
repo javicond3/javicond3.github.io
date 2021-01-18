@@ -2,10 +2,11 @@
 layout: default
 ---
 
-<div class="content page">
+<div>
   <header class="webhead">
     <h1 class="webhead-title">{{ site.special_title }}<span><small> Telecommunications Engineer </small></span></h1>
   </header>
   <h2 class="page-title">{{ page.title }}</h2>
-  {{ content }}
+  {% include_relative _about/about_text.md %}
+  {% include footer.html %}
 </div>

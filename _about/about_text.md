@@ -7,7 +7,7 @@
 <br>
 <br>
 
- I studied <span class="marked">Telecommunications Engineering</span> at <a href='https://www.etsit.upm.es/' target='_blank'>ETSIT-UPM</a> where I graduated as the first in the specialty of Telematics in the Degree in Telecommunications Technology and Services Engineering and I coursed the Master's in Telecommunications Engineering at the same university.
+ I studied <span class="marked">Telecommunications Engineering</span> at <a href='https://www.etsit.upm.es/' target='_blank'>ETSIT-UPM</a> where I graduated as the first in the specialty of Telematics in the Bachelor's Degree in Telecommunications Technology and Services Engineering and I coursed the Master's Degree in Telecommunications Engineering at the same university.
 
 <br>
 <br>
