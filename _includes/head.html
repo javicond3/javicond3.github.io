@@ -6,4 +6,7 @@
     <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Indie+Flower" />
     <link href="{{ site.baseurl }}/resources/font-awesome/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ site.baseurl }}/style.css">
+    {% if site.google_analytics %}
+        {% include analytics.html %}
+    {% endif %}
 </head>
