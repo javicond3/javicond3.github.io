@@ -1,0 +1,45 @@
+name: Copy _site to main
+
+on:
+  push:
+    branches: [ stable ]
+  pull_request:
+    branches: [ stable ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout stable
+      uses: actions/checkout@v2
+      with:
+        # Select branch.
+        ref: stable
+        path: ./dev
+    - name: Checkout main
+      uses: actions/checkout@v2
+      with:
+        # Select branch.
+        ref: main
+        path: ./main
+    - name: Remove all in main
+      run: |
+        cd main
+        rm -r *
+    - name: Copy new webpage into main
+      run: |
+        cp -r ./dev/_site/. ./main/.
+    - name: Commit files
+      run: |
+        cd main
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git commit -m "Update" -a
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        directory: ./main
+        github_token: ${{ secrets.PUSH_TOKEN }}
+        branch: main
