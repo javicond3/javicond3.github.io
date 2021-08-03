@@ -17,12 +17,14 @@ markdown:           kramdown
 
 cv_link:            "https://javicond3.github.io/CV/CV_en.pdf"
 nav:
-  - name:           "About"
+  - name:           "About me"
     href:           "/about"
-  - name:           "CV"
+  - name:           "Résumé"
     href:           "/cv"
   - name:           "Projects"
     href:           "/projects"
+  - name:           "Research"
+    href:           "/research"
   # - name:           "Education"
   #   href:           "/education"
   # - name:           "Interests"
@@ -52,4 +54,13 @@ defaults:
     values:
       layout:       "project"
 
-plugins:
+plugins: ['jekyll/scholar']
+
+# scholar plugin
+scholar:
+  style: apa
+  source: ./_bibliography
+  bibliography: publications.bib
+  bibliography_template: publication
+  bibliography_list_tag: div
+  bibliography_item_tag: span
