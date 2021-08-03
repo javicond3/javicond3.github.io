@@ -28,16 +28,15 @@ jobs:
       run: |
         cd main
         rm -r *
-        ls
     - name: Copy new webpage into main
       run: |
         cp -r ./dev/_site/. ./main/.
-        ls ./main
     - name: Commit files
       run: |
         cd main
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
+        git add .
         git commit -m "Update" -a
     - name: Push changes
       uses: ad-m/github-push-action@master
