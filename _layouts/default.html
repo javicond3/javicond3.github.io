@@ -11,7 +11,11 @@
         <hr>
         <nav class="profile-nav">
             {% for nav in site.nav %}
-            <p><a href="{{ nav.href }}">|{{ nav.name }}|</a><p> 
+                {% if nav.name == "Résumé" %}
+                    <p><a href="{{ nav.href }}" target="_blank">|{{ nav.name }}|</a><p> 
+                {% else %}
+                    <p><a href="{{ nav.href }}">|{{ nav.name }}|</a><p> 
+                {% endif %}
             {% endfor %}
         </nav>
         <hr>

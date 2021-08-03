@@ -15,18 +15,17 @@ baseurl:            ""
 
 markdown:           kramdown
 
-cv_link:            "https://javicond3.github.io/CV/CV_en.pdf"
 nav:
   - name:           "About me"
     href:           "/about"
-  - name:           "Résumé"
-    href:           "/cv"
   - name:           "Projects"
     href:           "/projects"
   - name:           "Research"
     href:           "/research"
-  # - name:           "Education"
-  #   href:           "/education"
+  - name:           "Teaching"
+    href:           "/teaching"
+  - name:           "Résumé"
+    href:           "https://javicond3.github.io/CV/CV_en.pdf"
   # - name:           "Interests"
   #   href:           "/interests"
   # - name:           "Contact"
