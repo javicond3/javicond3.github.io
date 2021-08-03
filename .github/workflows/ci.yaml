@@ -28,9 +28,11 @@ jobs:
       run: |
         cd main
         rm -r *
+        ls
     - name: Copy new webpage into main
       run: |
         cp -r ./dev/_site/. ./main/.
+        ls ./main
     - name: Commit files
       run: |
         cd main
