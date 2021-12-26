@@ -12,6 +12,7 @@
 
 ## Update the repo
  * ``` git push origin stable ```
+The github action will save the ```_site``` in main branch.
 
 ## Update the github page
  * From branch stable:
