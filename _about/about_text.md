@@ -1,4 +1,4 @@
-<p class="heavy-title">
+<p class="heavy-title links_underlined">
 
  <br>
 

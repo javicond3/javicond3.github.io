@@ -15,6 +15,8 @@ $sixth-color: #FEFFFF;
 $seventh-color: #BDBDBD;
 $eighth-color: #515151;
 
+$black-color: #000000;
+
 $personal-color: #1B227A;
 $professional-color: #383a38;
 $active-color: #347a34;
@@ -56,7 +58,7 @@ html {
 }
 
 body {
-    color: $eighth-color;
+    color: $black-color;
     background-color: $sixth-color;
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
@@ -185,6 +187,33 @@ img {
     border-radius: 5px;
 }
 
+button {
+    transition-duration: 0.4s;
+    background-color: $eighth-color;
+    border:none;
+    border-color: black;
+    border-width: 1px;
+    color: $sixth-color;
+    padding: 10px 10px;
+    text-align: center;
+    border-radius: 16px;
+  }
+  
+button:hover {
+background-color: $second-color; 
+color: $sixth-color;
+border:none;
+}
+button:active, button:focus, .button_pressed {
+    background-color: $second-color; 
+    color: $sixth-color;
+    border: none;
+}
+
+.button_nav {
+    font-size: 16px;
+}
+
 table {
     margin-bottom: 1rem;
     width: 100%;
@@ -198,9 +227,39 @@ th {
     border: 1px solid $seventh-color;
 }
 
-tbody tr:nth-child(odd) td,
-tbody tr:nth-child(odd) th {
-    background-color: $seventh-color;
+// tbody tr:nth-child(odd) td,
+// tbody tr:nth-child(odd) th {
+//     background-color: $seventh-color;
+// }
+
+th {
+    background-color: $first-color;
+    color: $fifth-color;
+}
+
+.table_plans {
+    border: $first-color;
+    td, 
+    th {
+        padding:0px;
+        border: 0.5px solid $first-color;
+    }
+}
+
+.table_subjects {
+    margin-bottom: 0px;
+    border: none;
+    td {
+        padding: 5px;
+    }
+    th {
+        background-color: $seventh-color;
+        color: $first-color;
+    }
+    // tbody tr:nth-child(odd) td {
+    // background-color: $seventh-color;
+    // }
+
 }
 
 .top {
@@ -214,6 +273,7 @@ tbody tr:nth-child(odd) th {
 
 
 .profile {
+    color: $eighth-color;
     background-color: $first-color;
     text-align: center;
     padding: 0.5rem 0rem 0.5rem 0rem;
@@ -266,7 +326,7 @@ tbody tr:nth-child(odd) th {
         padding: 0;
         overflow-y: auto;
         p {
-            font-size: 12px;
+            font-size: 16px;
             text-align: center;
             letter-spacing: 1.5px;
         }
@@ -278,7 +338,7 @@ tbody tr:nth-child(odd) th {
                 padding: 0;
                 margin-top: 0.1rem;
                 margin-bottom: 0.1srem;
-                font-size: 12px;
+                font-size: 14px;
             }
         }
     }
@@ -465,6 +525,12 @@ blockquote {
 
 .future {
     background-color: $future-color;
+}
+
+.links_underlined{
+    a {
+        text-decoration: underline;
+    }
 }
 
 /* Publications */

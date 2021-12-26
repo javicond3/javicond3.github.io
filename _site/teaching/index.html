@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Sans+Pro:300,300i,600">
     <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Indie+Flower" />
     <link href="/resources/font-awesome/css/font-awesome.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
     
         <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-NH74ZGDKHG"></script>
@@ -27,7 +27,7 @@
     <div class="profile">
         <img src="/assets/img/profile.jpg" class="img-circle" />
         <h3><span class='special_title'>J</span><span>avier</span> <span class='special_title'> C</span><span>onde</span></h3>
-        <p>Researcher and Ph.D. student at <a href='https://www.upm.es/' target='_blank'> UPM </a> and member of <a href='http://ging.github.io/' target='_blank'> GING </a></p>
+        <p><span class='links_underlined'>Researcher and Ph.D. student at <a href='https://www.upm.es/' target='_blank'>UPM</a> and member of <a href='http://ging.github.io/' target='_blank'>GING</a></span></p>
         <hr>
         <nav class="profile-nav">
             
@@ -45,6 +45,10 @@
             
                 
                     <p><a href="/teaching">|Teaching|</a><p> 
+                
+            
+                
+                    <p><a href="/courses">|Courses|</a><p> 
                 
             
                 
@@ -78,10 +82,144 @@
         
     </div>
     <header class="webhead">
-        <h1 class="webhead-title">Directing <span><small> Theses</small></span></h1>
+        <h1 class="webhead-title">Teaching:
+            <span>
+                <small id='title_subjects'>Subjects</small>
+                <small id='title_theses' style='display: none;'>Theses</small>
+            </span>
+            <div> 
+                <button class='button_nav button_pressed' id='button_subjects' onclick="changeTeaching('subjects')">Subjects</button>
+                <span class='button_nav' style="font-size:60%; color:#17252A"><b>|</b></span>
+                <button class ='button_nav' id='button_theses' onclick="changeTeaching('theses')">Theses</button>  
+            </div>
+        </h1>
     </header>
     <div>
-        <div class="bibliography"><span>
+        <div id='nav_subjects'>
+            <div>
+    
+        
+        <table class="table_plans">
+            <tr>
+                <th>Máster Universitario en Ingeniería de Telecomunicación <small>(UPM)</small></th>
+            </tr>
+            <td>
+            <table class="table_subjects">
+                <tr>
+                    <th>Subject</th>
+                    <th>Course</th>
+                    <th>Dates</th>
+                </tr>
+                         
+                    <tr>
+                        <td>Big Data: Fundamentos e Infraestructura</td>
+                        <td><small>2</small></td>
+                        <td><small>(2021-22)</small></td>
+                    </tr>
+                
+            
+            </table>
+        </td>
+    </table>
+        
+        <table class="table_plans">
+            <tr>
+                <th>Máster Universitario en Ingeniería de Redes y Servicios Telemáticos <small>(UPM)</small></th>
+            </tr>
+            <td>
+            <table class="table_subjects">
+                <tr>
+                    <th>Subject</th>
+                    <th>Course</th>
+                    <th>Dates</th>
+                </tr>
+                         
+                    <tr>
+                        <td>Sistemas de Información y Bases de Datos</td>
+                        <td><small>1</small></td>
+                        <td><small>(2021-22)</small></td>
+                    </tr>
+                
+            
+            </table>
+        </td>
+    </table>
+        
+        <table class="table_plans">
+            <tr>
+                <th>Grado en Ingeniería de Tecnologías y Servicios de Telecomunicación <small>(UPM)</small></th>
+            </tr>
+            <td>
+            <table class="table_subjects">
+                <tr>
+                    <th>Subject</th>
+                    <th>Course</th>
+                    <th>Dates</th>
+                </tr>
+                         
+                    <tr>
+                        <td>Computación en Red</td>
+                        <td><small>3</small></td>
+                        <td><small>(2021-22)</small></td>
+                    </tr>
+                
+            
+            </table>
+        </td>
+    </table>
+        
+        <table class="table_plans">
+            <tr>
+                <th>Grado en Ingeniería y Sistemas de Datos <small>(UPM)</small></th>
+            </tr>
+            <td>
+            <table class="table_subjects">
+                <tr>
+                    <th>Subject</th>
+                    <th>Course</th>
+                    <th>Dates</th>
+                </tr>
+                         
+                    <tr>
+                        <td>Bases de Datos Relacionales y Datos Estructurados</td>
+                        <td><small>1</small></td>
+                        <td><small>(2021-22)</small></td>
+                    </tr>
+                
+            
+            </table>
+        </td>
+    </table>
+        
+        <table class="table_plans">
+            <tr>
+                <th>Grado en Ingeniería Biomédica <small>(UPM)</small></th>
+            </tr>
+            <td>
+            <table class="table_subjects">
+                <tr>
+                    <th>Subject</th>
+                    <th>Course</th>
+                    <th>Dates</th>
+                </tr>
+                         
+                    <tr>
+                        <td>Bases de Datos</td>
+                        <td><small>3</small></td>
+                        <td><small>(2021-22)</small></td>
+                    </tr>
+                
+            
+            </table>
+        </td>
+    </table>
+        
+    
+  </div>
+    
+        </div>
+        <div id='nav_theses' style='display: none;'>
+                <div class="bibliography"><span>
     <p>
         <span id="robles2021">Robles, E. (2021). <i>Implementación de una extensión de la aplicación web de planificación de programaciones docentes de la ETSIT a nivel UPM</i>. Universidad Politécncia de Madrid (Grado en Ingeniaría de Tecnologías y Servicios de Telecomunicación).</span>
     </p>
@@ -105,8 +243,10 @@
     </p>
 
 <hr></span></div>
+        </div>
     </div>
 </div>
+<script type="text/javascript" src="/assets/js/teaching.js"></script>
     </div>
 </body>
 <script type="text/javascript">

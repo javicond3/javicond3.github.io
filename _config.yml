@@ -1,6 +1,6 @@
 title:              "Javier Conde"
 special_title:      "<span class='special_title'>J</span><span>avier</span> <span class='special_title'> C</span><span>onde</span>"
-description:        "Researcher and Ph.D. student at <a href='https://www.upm.es/' target='_blank'> UPM </a> and member of <a href='http://ging.github.io/' target='_blank'> GING </a>"
+description:        "<span class='links_underlined'>Researcher and Ph.D. student at <a href='https://www.upm.es/' target='_blank'>UPM</a> and member of <a href='http://ging.github.io/' target='_blank'>GING</a></span>"
 
 url:                "null"
 author:             "javicond3"
@@ -24,6 +24,8 @@ nav:
     href:           "/research"
   - name:           "Teaching"
     href:           "/teaching"
+  # - name:           "Courses"
+  #   href:           "/courses"
   - name:           "Résumé"
     href:           "https://javicond3.github.io/CV/CV_en.pdf"
   # - name:           "Interests"
@@ -37,6 +39,8 @@ sass:
 
 collections:
   projects:
+    output:         true
+  subjects:
     output:         true
 
 defaults:
