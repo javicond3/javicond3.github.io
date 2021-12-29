@@ -80,6 +80,9 @@ a {
     }
 }
 
+strong {
+    color: $second-color;
+}
 h1 {
     font-size: 2rem;
     color: $second-color;
@@ -549,3 +552,84 @@ blockquote {
     }
 }
 
+/**
+* HISTORY LINE
+*
+**/
+
+.item {
+    padding-top:100px;
+    min-height:150px;
+    position:relative
+}
+.item:before,.last-item:after {
+    width: 30px;
+    height: 30px;
+    display: inline-block;
+    content: "";
+    margin-left: 1rem;
+    position: relative;
+    z-index: 1;
+    left:calc(2% - 37px);
+    @media (min-width: 38em) {
+        left:calc(2% - 40px);
+    }
+    background: rgb(255, 255, 255);
+    border-width: 8px;
+    border-style: solid;
+    border-color: $first-color;
+    border-image: initial;
+    border-radius: 50%;
+}
+.vertical-line {
+    width:8px;
+    background-color: $first-color;
+    position:absolute;
+    left:calc(2%);
+    top:0;
+    bottom:0
+}
+.item .card-panel {
+    margin:0;
+    margin:2rem 0 0 3rem;
+    padding: 20px;
+    a {
+        text-decoration: underline;
+    }
+}
+
+
+.item-date {
+    margin-top:-60px;
+    margin-left:4rem;
+    color:$eighth-color;
+}
+.cv-title {
+    margin-bottom:0;
+    margin-left:calc(2%) !important;
+    line-height:190%
+}
+.cv-title span {
+    padding:1rem
+}
+.last-item{
+    padding-top:80px;
+    height:70px;
+    position:relative
+}
+
+.card-panel, .card {
+    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.8), 
+    0 1px 5px 0 rgba(0, 0, 0, 0.75), 
+    0 3px 1px -2px rgba(0, 0, 0, 0.9);
+    h3 {
+        padding: 0px;
+        margin: 0px;
+        color:$eighth-color;
+    }
+}
+
+.title_history {
+    background-color: $first-color;
+    color: $sixth-color;
+}

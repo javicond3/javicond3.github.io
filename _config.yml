@@ -42,6 +42,9 @@ collections:
     output:         true
   subjects:
     output:         true
+  steps:
+    title: Steps
+    output: false
 
 defaults:
   -
