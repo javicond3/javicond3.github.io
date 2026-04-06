@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAuthenticated } from "@/utils/auth";
-import CVBuilder, { CVData } from "@/components/CVBuilder";
+import CVBuilder from "@/components/CVBuilder";
+import type { CVData } from "@/types/cv";
 
 interface CVAdminClientProps {
   initialData: CVData;

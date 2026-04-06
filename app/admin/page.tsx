@@ -28,10 +28,12 @@ import {
   getInstitutionalRoles,
 } from "@/data/about";
 import { getAwards, getResearchVisits } from "@/data/awards";
+import { getBioStats } from "@/data/bioStats";
 import CVAdminClient from "@/components/CVAdminClient";
-import { CVData } from "@/components/CVBuilder";
+import type { CVData } from "@/types/cv";
 
 export default function AdminPage() {
+  const bioStats = getBioStats();
   const journals = getPublications();
   const conferences = getConferencePublications();
   const books = getBookPublications();
@@ -68,6 +70,7 @@ export default function AdminPage() {
   const researchVisits = getResearchVisits();
 
   const cvData: CVData = {
+    bioStats,
     journals,
     conferences,
     books,
