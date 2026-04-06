@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { navigateToHash } from "@/utils/navScroll";
+import NavAuthButton from "@/components/NavAuthButton";
+
 
 const sections = [
   {
@@ -47,11 +49,6 @@ const sections = [
       { label: "Invited Lectures", href: "#invited-lectures" },
       { label: "Events", href: "#events" },
     ],
-  },
-  {
-    label: "Login",
-    href: "/admin",
-    items: [],
   }
 ];
 
@@ -134,6 +131,7 @@ export default function NavMobile() {
               )}
             </div>
           ))}
+           <NavAuthButton isIcon={false} />
         </div>
       )}
     </div>

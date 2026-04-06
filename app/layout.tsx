@@ -40,7 +40,7 @@ export default function RootLayout({
               <NavProjects />
               <NavTeaching />
               <NavInternational />
-              <NavAuthButton />
+              <NavAuthButton isIcon={true} />
             </nav>
             {/* Mobile nav */}
             <NavMobile />
