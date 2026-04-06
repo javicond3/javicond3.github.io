@@ -473,7 +473,7 @@ function ItemCheckbox({ itemKey, label, selected, onToggle }: ItemCheckboxProps)
         className="w-4 h-4 rounded cursor-pointer flex-shrink-0 mt-0.5"
         style={{ accentColor: "#2ecfba" }}
       />
-      <span className="text-sm text-gray-600 leading-tight line-clamp-2 group-hover:text-gray-900 transition-colors">
+      <span className="text-sm text-gray-600 leading-tight group-hover:text-gray-900 transition-colors">
         {label}
       </span>
     </label>
@@ -671,7 +671,7 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
       </header>
 
       {/* Main content */}
-      <main className="px-6 lg:px-24 py-10 max-w-4xl">
+      <main className="px-6 lg:px-24 py-10 w-full">
         <div className="mb-8">
           <h1 className="text-2xl font-extrabold text-gray-900 mb-1">Generate CV</h1>
           <p className="text-sm text-gray-500">
