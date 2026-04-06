@@ -7,6 +7,7 @@ import NavProjects from "@/components/NavProjects";
 import NavTeaching from "@/components/NavTeaching";
 import NavInternational from "@/components/NavInternational";
 import NavMobile from "@/components/NavMobile";
+import NavAuthButton from "@/components/NavAuthButton";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,7 +32,7 @@ export default function RootLayout({
               Javier Conde
             </span>
             {/* Desktop nav */}
-            <nav className="hidden md:flex gap-6 text-sm font-medium">
+            <nav className="hidden md:flex gap-6 text-sm font-medium items-center">
               <a href="#about" className="text-gray-300 transition-colors hover:text-accent">
                 About
               </a>
@@ -39,6 +40,7 @@ export default function RootLayout({
               <NavProjects />
               <NavTeaching />
               <NavInternational />
+              <NavAuthButton />
             </nav>
             {/* Mobile nav */}
             <NavMobile />
