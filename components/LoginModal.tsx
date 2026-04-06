@@ -71,20 +71,10 @@ export default function LoginModal({ onClose }: LoginModalProps) {
           className="text-xl font-bold mb-1"
           style={{ color: "#1c2d2d" }}
         >
-          Admin Login
+          Private screen
         </h2>
-        <p className="text-sm text-gray-500 mb-5">
-          Enter the admin password to access the CV builder.
-        </p>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label
-              htmlFor="admin-password"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Password
-            </label>
             <input
               ref={inputRef}
               id="admin-password"

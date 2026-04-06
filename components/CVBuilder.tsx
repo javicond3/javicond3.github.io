@@ -162,7 +162,7 @@ function formatMonthYear(date: string | null): string {
 }
 
 function journalLabel(p: Publication): string {
-  const jcr = p.jcr ? ` (${p.jcr})` : "";
+  const jcr = p.jcr ? ` (JCR ${p.jcr})` : "";
   return `"${p.title}". (${p.year}). ${p.authors}. ${p.journal}${jcr}.`;
 }
 
@@ -439,6 +439,9 @@ function IndeterminateCheckbox({ state, onChange, label, bold, count }: Indeterm
         className={`${bold ? "font-semibold text-gray-800" : "font-medium text-gray-700"} text-sm group-hover:text-[#2ecfba] transition-colors flex-1 min-w-0`}
       >
         {label}
+        {count != null && (
+          <span className="font-normal text-gray-400 ml-1">({count.total})</span>
+        )}
       </span>
       {count != null && (
         <span className="text-xs rounded-full px-1.5 py-0.5 ml-1 flex-shrink-0 font-mono"
@@ -648,28 +651,6 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#f8fffe" }}>
-      {/* Header */}
-      <header className="sticky top-0 z-50 shadow-md" style={{ backgroundColor: "#1c2d2d" }}>
-        <div className="px-6 lg:px-24 h-14 flex items-center justify-between">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-[#2ecfba] transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-              <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
-            </svg>
-            Back
-          </Link>
-          <span className="font-bold tracking-tight" style={{ color: "#2ecfba" }}>CV Admin</span>
-          <button
-            onClick={handleLogout}
-            className="text-sm font-medium text-gray-300 hover:text-[#2ecfba] transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </header>
-
       {/* Main content */}
       <main className="px-6 lg:px-24 py-10 w-full">
         <div className="mb-8">

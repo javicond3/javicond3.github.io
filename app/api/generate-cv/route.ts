@@ -43,27 +43,39 @@ const Tc = (text: string) => new TextRun({ text, size: SZ, color: TEAL });
 const BoldIt = (text: string) => new TextRun({ text, size: SZ, bold: true, italics: true, color: BLACK });
 
 // ── Paragraph helpers ────────────────────────────────────────────────────────
-function h1(text: string): Paragraph {
+function h1(text: string, selected?: number, total?: number): Paragraph {
+  const badge = selected != null && total != null ? ` (listed ${selected} of ${total})` : "";
   return new Paragraph({
     heading: HeadingLevel.HEADING_1,
     spacing: { before: SP_BEFORE_H1, after: SP_AFTER_H1 },
-    children: [new TextRun({ text, size: SZ_H1, bold: true, color: DARK })],
+    children: [
+      new TextRun({ text, size: SZ_H1, bold: true, color: DARK }),
+      ...(badge ? [new TextRun({ text: badge, size: SZ_H1 - 4, bold: false, color: GRAY })] : []),
+    ],
   });
 }
 
-function h2(text: string): Paragraph {
+function h2(text: string, selected?: number, total?: number): Paragraph {
+  const badge = selected != null && total != null ? ` (listed ${selected} of ${total})` : "";
   return new Paragraph({
     heading: HeadingLevel.HEADING_2,
     spacing: { before: SP_BEFORE_H2, after: SP_AFTER_H2 },
-    children: [new TextRun({ text, size: SZ_H2, bold: true, color: TEAL })],
+    children: [
+      new TextRun({ text, size: SZ_H2, bold: true, color: TEAL }),
+      ...(badge ? [new TextRun({ text: badge, size: SZ_H2 - 4, bold: false, color: GRAY })] : []),
+    ],
   });
 }
 
-function h3(text: string): Paragraph {
+function h3(text: string, selected?: number, total?: number): Paragraph {
+  const badge = selected != null && total != null ? ` (listed ${selected} of ${total})` : "";
   return new Paragraph({
     heading: HeadingLevel.HEADING_3,
     spacing: { before: SP_BEFORE_H3, after: SP_AFTER_H3 },
-    children: [new TextRun({ text, size: SZ_H3, bold: true, color: TEAL })],
+    children: [
+      new TextRun({ text, size: SZ_H3, bold: true, color: TEAL }),
+      ...(badge ? [new TextRun({ text: badge, size: SZ_H3 - 4, bold: false, color: GRAY })] : []),
+    ],
   });
 }
 
@@ -252,6 +264,31 @@ export async function POST(req: NextRequest) {
 
     const docChildren: Paragraph[] = [];
 
+    // ── Cached data arrays (for total counts) ────────────────────────────────
+    const allPositions        = getPositions();
+    const allInstitutional    = getInstitutionalRoles();
+    const allEducation        = getEducation();
+    const allCertificates     = getCertificates();
+    const allJournals         = getPublications();
+    const allConferences      = getConferencePublications();
+    const allBooks            = getBookPublications();
+    const allOther            = getOtherPublications();
+    const allCompetitive      = getCompetitiveProjects();
+    const allPrivate          = getPrivateContracts();
+    const allSoftware         = getSoftwareProjects();
+    const allWgProjects       = getWorkingGroups();
+    const allCourses          = getCourses();
+    const allTProjects        = getTeachingProjects();
+    const allPhD              = getPhDTheses();
+    const allMaster           = getMasterTheses();
+    const allBachelor         = getBachelorTheses();
+    const allSupervisions     = getSupervisions();
+    const allExtCourses       = getExternalCourses();
+    const allVisits           = getResearchVisits();
+    const allAwards           = getAwards();
+    const allLectures         = getInvitedLectures();
+    const allEvents           = getEvents();
+
     // ── Bio ─────────────────────────────────────────────────────────────────
     if (itemSet.has("bio")) {
       docChildren.push(h1("Javier Conde"));
@@ -273,11 +310,13 @@ export async function POST(req: NextRequest) {
       const hasAny = posIdx.size > 0 || instIdx.size > 0 || eduIdx.size > 0 || certIdx.size > 0;
 
       if (hasAny) {
-        docChildren.push(h1("Position and Education"));
+        const selPosEdu = posIdx.size + instIdx.size + eduIdx.size + certIdx.size;
+        const totPosEdu = allPositions.length + allInstitutional.length + allEducation.length + allCertificates.length;
+        docChildren.push(h1("Position and Education", selPosEdu, totPosEdu));
 
         if (posIdx.size > 0) {
-          docChildren.push(h2("Position"));
-          getPositions().forEach((p, i) => {
+          docChildren.push(h2("Position", posIdx.size, allPositions.length));
+          allPositions.forEach((p, i) => {
             if (!posIdx.has(i)) return;
             const t = p.title.replace(/\.+$/, "");
             docChildren.push(item([
@@ -291,8 +330,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (instIdx.size > 0) {
-          docChildren.push(h2("Other Institutional Roles"));
-          getInstitutionalRoles().forEach((r, i) => {
+          docChildren.push(h2("Other Institutional Roles", instIdx.size, allInstitutional.length));
+          allInstitutional.forEach((r, i) => {
             if (!instIdx.has(i)) return;
             const t = r.title.replace(/\.+$/, "");
             docChildren.push(item([
@@ -305,8 +344,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (eduIdx.size > 0) {
-          docChildren.push(h2("Education"));
-          getEducation().forEach((e, i) => {
+          docChildren.push(h2("Education", eduIdx.size, allEducation.length));
+          allEducation.forEach((e, i) => {
             if (!eduIdx.has(i)) return;
             const t = e.title.replace(/\.+$/, "");
             docChildren.push(item([
@@ -320,8 +359,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (certIdx.size > 0) {
-          docChildren.push(h2("Certificates"));
-          getCertificates().forEach((c, i) => {
+          docChildren.push(h2("Certificates", certIdx.size, allCertificates.length));
+          allCertificates.forEach((c, i) => {
             if (!certIdx.has(i)) return;
             const t = c.title.replace(/\.+$/, "");
             docChildren.push(item([
@@ -343,12 +382,14 @@ export async function POST(req: NextRequest) {
       const hasAny = journalIdx.size > 0 || confIdx.size > 0 || bookIdx.size > 0 || otherIdx.size > 0;
 
       if (hasAny) {
-        docChildren.push(h1("Publications"));
+        docChildren.push(h1("Publications",
+          journalIdx.size + confIdx.size + bookIdx.size + otherIdx.size,
+          allJournals.length + allConferences.length + allBooks.length + allOther.length));
 
         // Journal
         if (journalIdx.size > 0) {
-          docChildren.push(h2("Journal Publications"));
-          getPublications().forEach((p, i) => {
+          docChildren.push(h2("Journal Publications", journalIdx.size, allJournals.length));
+          allJournals.forEach((p, i) => {
             if (!journalIdx.has(i)) return;
             const authors = p.authors.replace("J. Conde", "\x01J. Conde\x01");
             const authorRuns = authors.split("\x01").map((seg, si) =>
@@ -369,8 +410,8 @@ export async function POST(req: NextRequest) {
 
         // Conference
         if (confIdx.size > 0) {
-          docChildren.push(h2("Conference Papers"));
-          getConferencePublications().forEach((p, i) => {
+          docChildren.push(h2("Conference Papers", confIdx.size, allConferences.length));
+          allConferences.forEach((p, i) => {
             if (!confIdx.has(i)) return;
             const authors = p.authors.replace("J. Conde", "\x01J. Conde\x01");
             const authorRuns = authors.split("\x01").map((seg, si) =>
@@ -390,8 +431,8 @@ export async function POST(req: NextRequest) {
 
         // Books
         if (bookIdx.size > 0) {
-          docChildren.push(h2("Books"));
-          getBookPublications().forEach((p, i) => {
+          docChildren.push(h2("Books", bookIdx.size, allBooks.length));
+          allBooks.forEach((p, i) => {
             if (!bookIdx.has(i)) return;
             const authors = p.authors.replace("J. Conde", "\x01J. Conde\x01");
             const authorRuns = authors.split("\x01").map((seg, si) =>
@@ -410,8 +451,8 @@ export async function POST(req: NextRequest) {
 
         // Other
         if (otherIdx.size > 0) {
-          docChildren.push(h2("Other Publications"));
-          getOtherPublications().forEach((p, i) => {
+          docChildren.push(h2("Other Publications", otherIdx.size, allOther.length));
+          allOther.forEach((p, i) => {
             if (!otherIdx.has(i)) return;
             const authors = p.authors.replace("J. Conde", "\x01J. Conde\x01");
             const authorRuns = authors.split("\x01").map((seg, si) =>
@@ -439,11 +480,13 @@ export async function POST(req: NextRequest) {
       const hasAny = compIdx.size > 0 || privIdx.size > 0 || swIdx.size > 0 || wgProjIdx.size > 0;
 
       if (hasAny) {
-        docChildren.push(h1("Research Projects"));
+        docChildren.push(h1("Research Projects",
+          compIdx.size + privIdx.size + swIdx.size + wgProjIdx.size,
+          allCompetitive.length + allPrivate.length + allSoftware.length + allWgProjects.length));
 
         if (compIdx.size > 0) {
-          docChildren.push(h2("Competitive Projects"));
-          getCompetitiveProjects().forEach((p, i) => {
+          docChildren.push(h2("Competitive Projects", compIdx.size, allCompetitive.length));
+          allCompetitive.forEach((p, i) => {
             if (!compIdx.has(i)) return;
             const start = formatMonthYear(p.startDate);
             const end   = formatMonthYear(p.endDate);
@@ -463,8 +506,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (privIdx.size > 0) {
-          docChildren.push(h2("Private Contracts"));
-          getPrivateContracts().forEach((p, i) => {
+          docChildren.push(h2("Private Contracts", privIdx.size, allPrivate.length));
+          allPrivate.forEach((p, i) => {
             if (!privIdx.has(i)) return;
             const start = formatMonthYear(p.startDate);
             const end   = formatMonthYear(p.endDate);
@@ -482,8 +525,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (swIdx.size > 0) {
-          docChildren.push(h2("Software"));
-          getSoftwareProjects().forEach((s, i) => {
+          docChildren.push(h2("Software", swIdx.size, allSoftware.length));
+          allSoftware.forEach((s, i) => {
             if (!swIdx.has(i)) return;
             const t = s.title.replace(/\.+$/, "");
             docChildren.push(item([
@@ -495,8 +538,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (wgProjIdx.size > 0) {
-          docChildren.push(h2("Working Groups, Standardisation Bodies, and Industry"));
-          getWorkingGroups().forEach((wg, i) => {
+          docChildren.push(h2("Working Groups, Standardisation Bodies, and Industry", wgProjIdx.size, allWgProjects.length));
+          allWgProjects.forEach((wg, i) => {
             if (!wgProjIdx.has(i)) return;
             const t = wg.title.replace(/\.+$/, "");
             docChildren.push(item([
@@ -523,11 +566,13 @@ export async function POST(req: NextRequest) {
                      masterIdx.size > 0 || bachelorIdx.size > 0 || supIdx.size > 0 || extIdx.size > 0;
 
       if (hasAny) {
-        docChildren.push(h1("Teaching"));
+        docChildren.push(h1("Teaching",
+          courseIdx.size + tprojIdx.size + phdIdx.size + masterIdx.size + bachelorIdx.size + supIdx.size + extIdx.size,
+          allCourses.length + allTProjects.length + allPhD.length + allMaster.length + allBachelor.length + allSupervisions.length + allExtCourses.length));
 
         if (courseIdx.size > 0) {
-          docChildren.push(h2("Courses"));
-          getCourses().forEach((c, i) => {
+          docChildren.push(h2("Courses", courseIdx.size, allCourses.length));
+          allCourses.forEach((c, i) => {
             if (!courseIdx.has(i)) return;
             docChildren.push(item([
               B(c.title),
@@ -541,8 +586,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (tprojIdx.size > 0) {
-          docChildren.push(h2("Teaching Innovation Projects"));
-          getTeachingProjects().forEach((tp, i) => {
+          docChildren.push(h2("Teaching Innovation Projects", tprojIdx.size, allTProjects.length));
+          allTProjects.forEach((tp, i) => {
             if (!tprojIdx.has(i)) return;
             const t = tp.title.replace(/\.+$/, "");
             docChildren.push(item([
@@ -556,7 +601,9 @@ export async function POST(req: NextRequest) {
 
         const hasSupervision = phdIdx.size > 0 || masterIdx.size > 0 || bachelorIdx.size > 0 || supIdx.size > 0;
         if (hasSupervision) {
-          docChildren.push(h2("Supervision"));
+          docChildren.push(h2("Supervision",
+            phdIdx.size + masterIdx.size + bachelorIdx.size + supIdx.size,
+            allPhD.length + allMaster.length + allBachelor.length + allSupervisions.length));
 
           const thesisItem = (t: { title: string; author: string; degree?: string; year?: number }) => item([
             B(t.title.replace(/\.+$/, "")),
@@ -567,26 +614,26 @@ export async function POST(req: NextRequest) {
           ]);
 
           if (phdIdx.size > 0) {
-            docChildren.push(h3("PhD Thesis"));
-            getPhDTheses().forEach((t, i) => { if (phdIdx.has(i)) docChildren.push(thesisItem(t)); });
+            docChildren.push(h3("PhD Thesis", phdIdx.size, allPhD.length));
+            allPhD.forEach((t, i) => { if (phdIdx.has(i)) docChildren.push(thesisItem(t)); });
           }
           if (masterIdx.size > 0) {
-            docChildren.push(h3("Master Thesis"));
-            getMasterTheses().forEach((t, i) => { if (masterIdx.has(i)) docChildren.push(thesisItem(t)); });
+            docChildren.push(h3("Master Thesis", masterIdx.size, allMaster.length));
+            allMaster.forEach((t, i) => { if (masterIdx.has(i)) docChildren.push(thesisItem(t)); });
           }
           if (bachelorIdx.size > 0) {
-            docChildren.push(h3("Bachelor Thesis"));
-            getBachelorTheses().forEach((t, i) => { if (bachelorIdx.has(i)) docChildren.push(thesisItem(t)); });
+            docChildren.push(h3("Bachelor Thesis", bachelorIdx.size, allBachelor.length));
+            allBachelor.forEach((t, i) => { if (bachelorIdx.has(i)) docChildren.push(thesisItem(t)); });
           }
           if (supIdx.size > 0) {
-            docChildren.push(h3("Student Supervision"));
-            getSupervisions().forEach((t, i) => { if (supIdx.has(i)) docChildren.push(thesisItem(t)); });
+            docChildren.push(h3("Student Supervision", supIdx.size, allSupervisions.length));
+            allSupervisions.forEach((t, i) => { if (supIdx.has(i)) docChildren.push(thesisItem(t)); });
           }
         }
 
         if (extIdx.size > 0) {
-          docChildren.push(h2("External Courses"));
-          getExternalCourses().forEach((c, i) => {
+          docChildren.push(h2("External Courses", extIdx.size, allExtCourses.length));
+          allExtCourses.forEach((c, i) => {
             if (!extIdx.has(i)) return;
             docChildren.push(item([
               B(c.title),
@@ -609,11 +656,13 @@ export async function POST(req: NextRequest) {
       const hasAny = visitIdx.size > 0 || awardIdx.size > 0 || wgIntlIdx.size > 0 || lectureIdx.size > 0 || eventIdx.size > 0;
 
       if (hasAny) {
-        docChildren.push(h1("International"));
+        docChildren.push(h1("International",
+          visitIdx.size + awardIdx.size + wgIntlIdx.size + lectureIdx.size + eventIdx.size,
+          allVisits.length + allAwards.length + allWgProjects.length + allLectures.length + allEvents.length));
 
         if (visitIdx.size > 0) {
-          docChildren.push(h2("Research Visits"));
-          getResearchVisits().forEach((v, i) => {
+          docChildren.push(h2("Research Visits", visitIdx.size, allVisits.length));
+          allVisits.forEach((v, i) => {
             if (!visitIdx.has(i)) return;
             const t = v.title.replace(/\.+$/, "");
             docChildren.push(item([
@@ -628,8 +677,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (awardIdx.size > 0) {
-          docChildren.push(h2("Awards"));
-          getAwards().forEach((a, i) => {
+          docChildren.push(h2("Awards", awardIdx.size, allAwards.length));
+          allAwards.forEach((a, i) => {
             if (!awardIdx.has(i)) return;
             const t = a.title.replace(/\.+$/, "");
             const org = a.organization ? a.organization.replace(/\.+$/, "") : "";
@@ -644,8 +693,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (wgIntlIdx.size > 0) {
-          docChildren.push(h2("Working Groups, Standardisation Bodies, and Industry"));
-          getWorkingGroups().forEach((wg, i) => {
+          docChildren.push(h2("Working Groups, Standardisation Bodies, and Industry", wgIntlIdx.size, allWgProjects.length));
+          allWgProjects.forEach((wg, i) => {
             if (!wgIntlIdx.has(i)) return;
             const t = wg.title.replace(/\.+$/, "");
             docChildren.push(item([
@@ -658,8 +707,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (lectureIdx.size > 0) {
-          docChildren.push(h2("Invited Lectures"));
-          getInvitedLectures().forEach((l, i) => {
+          docChildren.push(h2("Invited Lectures", lectureIdx.size, allLectures.length));
+          allLectures.forEach((l, i) => {
             if (!lectureIdx.has(i)) return;
             const t = l.title.replace(/\.+$/, "");
             docChildren.push(item([
@@ -673,8 +722,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (eventIdx.size > 0) {
-          docChildren.push(h2("Events"));
-          getEvents().forEach((e, i) => {
+          docChildren.push(h2("Events", eventIdx.size, allEvents.length));
+          allEvents.forEach((e, i) => {
             if (!eventIdx.has(i)) return;
             const t = e.title.replace(/\.+$/, "");
             docChildren.push(item([

@@ -48,6 +48,11 @@ const sections = [
       { label: "Events", href: "#events" },
     ],
   },
+  {
+    label: "Login",
+    href: "/admin",
+    items: [],
+  }
 ];
 
 export default function NavMobile() {

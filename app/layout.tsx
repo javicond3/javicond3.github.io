@@ -28,9 +28,9 @@ export default function RootLayout({
         {/* Top nav */}
         <header className="sticky top-0 z-50 shadow-md" style={{ backgroundColor: "#1c2d2d" }}>
           <div className="px-6 lg:px-24 h-14 flex items-center justify-between relative">
-            <span className="font-bold tracking-tight" style={{ color: "#2ecfba" }}>
+            <a className="font-bold tracking-tight" style={{ color: "#2ecfba" }} href="/">
               Javier Conde
-            </span>
+            </a>
             {/* Desktop nav */}
             <nav className="hidden md:flex gap-6 text-sm font-medium items-center">
               <a href="#about" className="text-gray-300 transition-colors hover:text-accent">
