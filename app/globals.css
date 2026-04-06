@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --accent: #2ecfba;
+  --dark:   #1c2d2d;
+}
+
+@layer utilities {
+  .text-accent {
+    color: var(--accent);
+  }
+  .bg-accent {
+    background-color: var(--accent);
+  }
+  .hover\:text-accent:hover {
+    color: var(--accent);
+  }
+  .bg-dark {
+    background-color: var(--dark);
+  }
+  .text-dark {
+    color: var(--dark);
+  }
+  .border-accent {
+    border-color: var(--accent);
+  }
+}
