@@ -145,6 +145,23 @@ function eventLabel(e: InvitedEvent): string {
   return `${e.title}${rol}${prog}${loc}${year}.`;
 }
 
+function reviewerLabel(data: CVData): string {
+  const { journals, books, conferences } = data.reviewerData;
+  const segments: string[] = [];
+
+  if (journals.length > 0) {
+    segments.push(`Reviewer in ${journals.length} journals such as ${journals.join("; ")}`);
+  }
+  if (books.length > 0) {
+    segments.push(`${books.length} books such as ${books.join("; ")}`);
+  }
+  if (conferences.length > 0) {
+    segments.push(`${conferences.length} conferences such as ${conferences.join("; ")}`);
+  }
+
+  return segments.join("; and ") + ".";
+}
+
 // ─── Build item key map ────────────────────────────────────────────────────────
 // Returns { key -> label } for every selectable item.
 
@@ -156,6 +173,9 @@ function buildItemMap(data: CVData): Map<string, string> {
   data.conferences.forEach((p, i) => map.set(`conference-${i}`, conferenceLabel(p)));
   data.books.forEach((p, i) => map.set(`book-${i}`, bookLabel(p)));
   data.otherPubs.forEach((p, i) => map.set(`other-${i}`, otherPubLabel(p)));
+  if (data.reviewerData.journals.length > 0 || data.reviewerData.books.length > 0 || data.reviewerData.conferences.length > 0) {
+    map.set("reviewer", reviewerLabel(data));
+  }
 
   data.competitive.forEach((p, i) => map.set(`competitive-${i}`, competitiveLabel(p)));
   data.private.forEach((p, i) => map.set(`private-${i}`, privateLabel(p)));
@@ -218,6 +238,11 @@ function buildSectionGroups(data: CVData): SectionGroup[] {
         { label: "Conference Papers", prefix: "conference", count: data.conferences.length },
         { label: "Books", prefix: "book", count: data.books.length },
         { label: "Other Publications", prefix: "other", count: data.otherPubs.length },
+        {
+          label: "Reviewer",
+          prefix: "reviewer",
+          count: data.reviewerData.journals.length > 0 || data.reviewerData.books.length > 0 || data.reviewerData.conferences.length > 0 ? 1 : 0,
+        },
       ],
     },
     {
@@ -264,7 +289,7 @@ function buildSectionGroups(data: CVData): SectionGroup[] {
 // ─── Helper: get all item keys for a prefix ────────────────────────────────────
 
 function getKeysForPrefix(prefix: string, itemMap: Map<string, string>): string[] {
-  if (prefix === "bio") return itemMap.has("bio") ? ["bio"] : [];
+  if (itemMap.has(prefix)) return [prefix];
   return Array.from(itemMap.keys()).filter((k) => k.startsWith(prefix + "-"));
 }
 
@@ -286,9 +311,11 @@ interface IndeterminateCheckboxProps {
   label: string;
   bold?: boolean;
   count?: { selected: number; total: number };
+  expanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
-function IndeterminateCheckbox({ state, onChange, label, bold, count }: IndeterminateCheckboxProps) {
+function IndeterminateCheckbox({ state, onChange, label, bold, count, expanded, onToggleExpand }: IndeterminateCheckboxProps) {
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (ref.current) {
@@ -298,6 +325,29 @@ function IndeterminateCheckbox({ state, onChange, label, bold, count }: Indeterm
 
   return (
     <label className="flex items-center gap-2 cursor-pointer py-1 group select-none w-full">
+      {onToggleExpand ? (
+        <button
+          type="button"
+          aria-label={expanded ? `Collapse ${label}` : `Expand ${label}`}
+          aria-expanded={expanded}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onToggleExpand();
+          }}
+          className="w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-[#2ecfba] hover:bg-[#f0fdfa] transition-colors flex-shrink-0"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className={`w-4 h-4 transition-transform ${expanded ? "rotate-90" : ""}`}
+          >
+            <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L10.94 10 7.23 6.29a.75.75 0 1 1 1.06-1.06l4.24 4.24a.75.75 0 0 1 0 1.06l-4.24 4.24a.75.75 0 0 1-1.08 0Z" clipRule="evenodd" />
+          </svg>
+        </button>
+      ) : (
+        <span className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+      )}
       <input
         ref={ref}
         type="checkbox"
@@ -357,21 +407,25 @@ function ItemCheckbox({ itemKey, label, selected, onToggle }: ItemCheckboxProps)
 // ─── SubsectionBlock ──────────────────────────────────────────────────────────
 
 interface SubsectionBlockProps {
+  sectionId: string;
   label: string;
   prefix: string;
   itemMap: Map<string, string>;
   selected: Set<string>;
   onToggleItems: (keys: string[], force: boolean) => void;
   onToggleItem: (key: string) => void;
+  isExpanded: (id: string) => boolean;
+  onToggleExpand: (id: string) => void;
   subgroups?: { label: string; prefix: string; count: number }[];
 }
 
-function SubsectionBlock({ label, prefix, itemMap, selected, onToggleItems, onToggleItem, subgroups }: SubsectionBlockProps) {
+function SubsectionBlock({ sectionId, label, prefix, itemMap, selected, onToggleItems, onToggleItem, isExpanded, onToggleExpand, subgroups }: SubsectionBlockProps) {
   if (subgroups) {
     // Supervision-style: has subgroups
     const allKeys = subgroups.flatMap((sg) => getKeysForPrefix(sg.prefix, itemMap));
     const groupState = getGroupState(allKeys, selected);
     const selectedCount = allKeys.filter((k) => selected.has(k)).length;
+    const expanded = isExpanded(sectionId);
 
     return (
       <div className="mt-2">
@@ -381,35 +435,45 @@ function SubsectionBlock({ label, prefix, itemMap, selected, onToggleItems, onTo
           label={label}
           bold
           count={{ selected: selectedCount, total: allKeys.length }}
+          expanded={expanded}
+          onToggleExpand={() => onToggleExpand(sectionId)}
         />
-        <div className="border-l-2 border-gray-100 ml-2 mt-1 space-y-2">
-          {subgroups.map((sg) => {
-            const sgKeys = getKeysForPrefix(sg.prefix, itemMap);
-            const sgState = getGroupState(sgKeys, selected);
-            const sgSelected = sgKeys.filter((k) => selected.has(k)).length;
-            return (
-              <div key={sg.prefix} className="pl-2">
-                <IndeterminateCheckbox
-                  state={sgState}
-                  onChange={() => onToggleItems(sgKeys, sgState !== "checked")}
-                  label={sg.label}
-                  count={{ selected: sgSelected, total: sgKeys.length }}
-                />
-                <div className="mt-0.5">
-                  {sgKeys.map((k) => (
-                    <ItemCheckbox
-                      key={k}
-                      itemKey={k}
-                      label={itemMap.get(k) ?? k}
-                      selected={selected.has(k)}
-                      onToggle={onToggleItem}
-                    />
-                  ))}
+        {expanded && (
+          <div className="border-l-2 border-gray-100 ml-2 mt-1 space-y-2">
+            {subgroups.map((sg) => {
+              const subgroupId = `${sectionId}:${sg.prefix}`;
+              const subgroupExpanded = isExpanded(subgroupId);
+              const sgKeys = getKeysForPrefix(sg.prefix, itemMap);
+              const sgState = getGroupState(sgKeys, selected);
+              const sgSelected = sgKeys.filter((k) => selected.has(k)).length;
+              return (
+                <div key={sg.prefix} className="pl-2">
+                  <IndeterminateCheckbox
+                    state={sgState}
+                    onChange={() => onToggleItems(sgKeys, sgState !== "checked")}
+                    label={sg.label}
+                    count={{ selected: sgSelected, total: sgKeys.length }}
+                    expanded={subgroupExpanded}
+                    onToggleExpand={() => onToggleExpand(subgroupId)}
+                  />
+                  {subgroupExpanded && (
+                    <div className="mt-0.5">
+                      {sgKeys.map((k) => (
+                        <ItemCheckbox
+                          key={k}
+                          itemKey={k}
+                          label={itemMap.get(k) ?? k}
+                          selected={selected.has(k)}
+                          onToggle={onToggleItem}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }
@@ -418,6 +482,7 @@ function SubsectionBlock({ label, prefix, itemMap, selected, onToggleItems, onTo
   if (keys.length === 0) return null;
   const groupState = getGroupState(keys, selected);
   const selectedCount = keys.filter((k) => selected.has(k)).length;
+  const expanded = isExpanded(sectionId);
 
   return (
     <div className="mt-2">
@@ -427,18 +492,22 @@ function SubsectionBlock({ label, prefix, itemMap, selected, onToggleItems, onTo
         label={label}
         bold
         count={{ selected: selectedCount, total: keys.length }}
+        expanded={expanded}
+        onToggleExpand={() => onToggleExpand(sectionId)}
       />
-      <div className="mt-0.5">
-        {keys.map((k) => (
-          <ItemCheckbox
-            key={k}
-            itemKey={k}
-            label={itemMap.get(k) ?? k}
-            selected={selected.has(k)}
-            onToggle={onToggleItem}
-          />
-        ))}
-      </div>
+      {expanded && (
+        <div className="mt-0.5">
+          {keys.map((k) => (
+            <ItemCheckbox
+              key={k}
+              itemKey={k}
+              label={itemMap.get(k) ?? k}
+              selected={selected.has(k)}
+              onToggle={onToggleItem}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -449,6 +518,11 @@ interface CVBuilderProps {
   cvData: CVData;
 }
 
+function getInitialExpandedSections(sectionGroups: SectionGroup[]): Set<string> {
+  void sectionGroups;
+  return new Set<string>();
+}
+
 export default function CVBuilder({ cvData }: CVBuilderProps) {
   const router = useRouter();
   const itemMap = buildItemMap(cvData);
@@ -456,6 +530,7 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
   const sectionGroups = buildSectionGroups(cvData);
 
   const [selected, setSelected] = useState<Set<string>>(new Set(allKeys));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => getInitialExpandedSections(sectionGroups));
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -479,6 +554,16 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
 
   const handleSelectAll = () => setSelected(new Set(allKeys));
   const handleDeselectAll = () => setSelected(new Set());
+  const isExpanded = useCallback((id: string) => expandedSections.has(id), [expandedSections]);
+
+  const handleToggleExpand = useCallback((id: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -567,6 +652,7 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
         {/* Section tree */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-6 py-5 space-y-4">
           {sectionGroups.map((group) => {
+            const groupId = group.h1;
             const allGroupKeys = group.subsections.flatMap((sub) => {
               if (sub.subgroups) {
                 return sub.subgroups.flatMap((sg) => getKeysForPrefix(sg.prefix, itemMap));
@@ -575,6 +661,7 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
             });
             const groupState = getGroupState(allGroupKeys, selected);
             const groupSelected = allGroupKeys.filter((k) => selected.has(k)).length;
+            const groupExpanded = isExpanded(groupId);
 
             return (
               <div key={group.h1} className="pb-4 border-b border-gray-100 last:border-b-0 last:pb-0">
@@ -585,23 +672,30 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
                   label={group.h1}
                   bold
                   count={{ selected: groupSelected, total: allGroupKeys.length }}
+                  expanded={groupExpanded}
+                  onToggleExpand={() => handleToggleExpand(groupId)}
                 />
 
                 {/* H2-level subsections */}
-                <div className="border-l-2 border-gray-100 ml-2 mt-1 space-y-1 pl-2">
-                  {group.subsections.map((sub) => (
-                    <SubsectionBlock
-                      key={sub.prefix}
-                      label={sub.label}
-                      prefix={sub.prefix}
-                      itemMap={itemMap}
-                      selected={selected}
-                      onToggleItems={handleToggleItems}
-                      onToggleItem={handleToggleItem}
-                      subgroups={sub.subgroups}
-                    />
-                  ))}
-                </div>
+                {groupExpanded && (
+                  <div className="border-l-2 border-gray-100 ml-2 mt-1 space-y-1 pl-2">
+                    {group.subsections.map((sub) => (
+                      <SubsectionBlock
+                        key={sub.prefix}
+                        sectionId={`${group.h1}:${sub.prefix}`}
+                        label={sub.label}
+                        prefix={sub.prefix}
+                        itemMap={itemMap}
+                        selected={selected}
+                        onToggleItems={handleToggleItems}
+                        onToggleItem={handleToggleItem}
+                        isExpanded={isExpanded}
+                        onToggleExpand={handleToggleExpand}
+                        subgroups={sub.subgroups}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}

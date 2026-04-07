@@ -151,8 +151,15 @@ export interface BioStats {
   moocCount: number;
 }
 
+export interface ReviewerData {
+  journals: string[];
+  conferences: string[];
+  books: string[];
+}
+
 export interface CVData {
   bioStats: BioStats;
+  reviewerData: ReviewerData;
   journals: Publication[];
   conferences: Publication[];
   books: Publication[];

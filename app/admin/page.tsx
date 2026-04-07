@@ -3,6 +3,7 @@ import {
   getConferencePublications,
   getBookPublications,
   getOtherPublications,
+  getReviewerData,
 } from "@/data/publications";
 import {
   getCompetitiveProjects,
@@ -38,6 +39,7 @@ export default function AdminPage() {
   const conferences = getConferencePublications();
   const books = getBookPublications();
   const otherPubs = getOtherPublications();
+  const reviewerData = getReviewerData();
 
   const serializeProjects = (projects: ReturnType<typeof getCompetitiveProjects>) =>
     projects.map((p) => ({
@@ -71,6 +73,7 @@ export default function AdminPage() {
 
   const cvData: CVData = {
     bioStats,
+    reviewerData,
     journals,
     conferences,
     books,

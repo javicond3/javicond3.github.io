@@ -93,6 +93,40 @@ function formatMonthYear(date: string | null): string {
   return `${months[value.getMonth()]} ${value.getFullYear()}`;
 }
 
+function buildReviewerRuns(cvData: CVData): TextRun[] {
+  const { journals, books, conferences } = cvData.reviewerData;
+  const runs: TextRun[] = [];
+
+  if (journals.length > 0) {
+    runs.push(N(`Reviewer in ${journals.length} journals such as `));
+    journals.forEach((journal, index) => {
+      runs.push(It(journal));
+      if (index < journals.length - 1) runs.push(N("; "));
+    });
+  }
+
+  if (books.length > 0) {
+    if (runs.length > 0) runs.push(N(`; ${books.length} books such as `));
+    else runs.push(N(`Reviewer in ${books.length} books such as `));
+    books.forEach((book, index) => {
+      runs.push(It(book));
+      if (index < books.length - 1) runs.push(N("; "));
+    });
+  }
+
+  if (conferences.length > 0) {
+    if (runs.length > 0) runs.push(N(`; and ${conferences.length} conferences such as `));
+    else runs.push(N(`Reviewer in ${conferences.length} conferences such as `));
+    conferences.forEach((conference, index) => {
+      runs.push(B(conference));
+      if (index < conferences.length - 1) runs.push(N("; "));
+    });
+  }
+
+  runs.push(N("."));
+  return runs;
+}
+
 function buildBio(cvData: CVData): Paragraph[] {
   const s = cvData.bioStats;
   const paras: Paragraph[] = [];
@@ -258,6 +292,7 @@ function buildDocument(selectedItems: string[], cvData: CVData): Document {
   const allConferences = cvData.conferences;
   const allBooks = cvData.books;
   const allOther = cvData.otherPubs;
+  const hasReviewer = cvData.reviewerData.journals.length > 0 || cvData.reviewerData.books.length > 0 || cvData.reviewerData.conferences.length > 0;
   const allCompetitive = cvData.competitive;
   const allPrivate = cvData.private;
   const allSoftware = cvData.software;
@@ -359,13 +394,14 @@ function buildDocument(selectedItems: string[], cvData: CVData): Document {
     const confIdx = selectedIndices(selectedItems, "conference");
     const bookIdx = selectedIndices(selectedItems, "book");
     const otherIdx = selectedIndices(selectedItems, "other");
-    const hasAny = journalIdx.size > 0 || confIdx.size > 0 || bookIdx.size > 0 || otherIdx.size > 0;
+    const reviewerSelected = itemSet.has("reviewer");
+    const hasAny = journalIdx.size > 0 || confIdx.size > 0 || bookIdx.size > 0 || otherIdx.size > 0 || reviewerSelected;
 
     if (hasAny) {
       docChildren.push(h1(
         "Publications",
-        journalIdx.size + confIdx.size + bookIdx.size + otherIdx.size,
-        allJournals.length + allConferences.length + allBooks.length + allOther.length,
+        journalIdx.size + confIdx.size + bookIdx.size + otherIdx.size + (reviewerSelected ? 1 : 0),
+        allJournals.length + allConferences.length + allBooks.length + allOther.length + (hasReviewer ? 1 : 0),
       ));
 
       if (journalIdx.size > 0) {
@@ -437,6 +473,11 @@ function buildDocument(selectedItems: string[], cvData: CVData): Document {
             N("."),
           ]));
         });
+      }
+
+      if (reviewerSelected && hasReviewer) {
+        docChildren.push(h2("Reviewer", 1, 1));
+        docChildren.push(para(buildReviewerRuns(cvData), 60));
       }
     }
   }
