@@ -93,6 +93,10 @@ function formatMonthYear(date: string | null): string {
   return `${months[value.getMonth()]} ${value.getFullYear()}`;
 }
 
+function stripTrailingPeriods(value: string | undefined): string {
+  return value ? value.trim().replace(/\.+$/, "") : "";
+}
+
 function buildReviewerRuns(cvData: CVData): TextRun[] {
   const { journals, books, conferences } = cvData.reviewerData;
   const runs: TextRun[] = [];
@@ -540,10 +544,13 @@ function buildDocument(selectedItems: string[], cvData: CVData): Document {
         docChildren.push(h2("Software", swIdx.size, allSoftware.length));
         allSoftware.forEach((software, i) => {
           if (!swIdx.has(i)) return;
-          const title = software.title.replace(/\.+$/, "");
+          const title = stripTrailingPeriods(software.title);
+          const description = stripTrailingPeriods(software.description);
+          const link = software.link?.trim();
           docChildren.push(item([
-            ...(software.link ? [new TextRun({ text: title, size: SZ, bold: true, color: TEAL })] : [B(title)]),
-            ...(software.description ? [N(`. ${software.description}`)] : []),
+            ...(link ? [new TextRun({ text: title, size: SZ, bold: true, color: TEAL })] : [B(title)]),
+            ...(description ? [N(`. ${description}`)] : []),
+            ...(link ? [N(`. Link: ${link}`)] : []),
             N("."),
           ]));
         });

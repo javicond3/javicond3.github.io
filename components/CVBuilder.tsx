@@ -69,9 +69,20 @@ function privateLabel(p: Project): string {
   return `${period}${p.title}. ${p.funder}${scope}`;
 }
 
+function stripTrailingPeriods(value: string | undefined): string {
+  return value ? value.trim().replace(/\.+$/, "") : "";
+}
+
 function softwareLabel(s: SoftwareProject): string {
-  const desc = s.description ? ` ${s.description}` : "";
-  return `${s.title}.${desc}`;
+  const title = stripTrailingPeriods(s.title);
+  const description = stripTrailingPeriods(s.description);
+  const link = s.link?.trim();
+  const parts = [title];
+
+  if (description) parts.push(description);
+  if (link) parts.push(`Link: ${link}`);
+
+  return parts.join(". ") + ".";
 }
 
 function wgLabel(wg: WorkingGroup): string {
