@@ -1,0 +1,91 @@
+name: Weekly update from sharepoint
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"  # Monday at 09:00 UTC
+  workflow_dispatch:      # Allow manual triggering of the workflow
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Create data directory
+        run: mkdir -p data
+
+      - name: Download files
+        run: |
+          USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          
+          # Awards.xlsx
+          echo "Downloading Awards.xlsx..."
+          curl -L -A "$USER_AGENT" \
+          "https://upm365-my.sharepoint.com/personal/javier_conde_diaz_upm_es/_layouts/15/download.aspx?share=IQAA5BukOpVgT52FZMeku6MlAQM5LAZUHd1GDm_R3nqJt1I" \
+          -o data/Awards.xlsx
+
+          # Courses.xlsx
+          echo "Downloading Courses.xlsx..."
+          curl -L -A "$USER_AGENT" \
+          "https://upm365-my.sharepoint.com/personal/javier_conde_diaz_upm_es/_layouts/15/download.aspx?share=IQDJFw_igjOJRIrLq75xUc7kAeJAMVTgR0UwaSoDmflOLNM" \
+          -o data/Courses.xlsx
+
+          # External_Courses_Events_Lectures.xlsx
+          echo "Downloading External_Courses_Events_Lectures.xlsx..."
+          curl -L -A "$USER_AGENT" \
+          "https://upm365-my.sharepoint.com/personal/javier_conde_diaz_upm_es/_layouts/15/download.aspx?share=IQCIGmOzoOlcR4WA-BqCHMscAarAzWFy2OKEpS9cfSKwEYk" \
+          -o data/External_Courses_Events_Lectures.xlsx
+
+          # Projects.xlsx
+          echo "Downloading Projects.xlsx..."
+          curl -L -A "$USER_AGENT" \
+          "https://upm365-my.sharepoint.com/personal/javier_conde_diaz_upm_es/_layouts/15/download.aspx?share=IQB_kTbXZx_1QJcgPEBx1H5fAVLsCHvB_IeFaVey2YWBHFM" \
+          -o data/Projects.xlsx
+         
+          # Publications.xlsx
+          echo "Downloading Publications.xlsx..."
+          curl -L -A "$USER_AGENT" \
+          "https://upm365-my.sharepoint.com/personal/javier_conde_diaz_upm_es/_layouts/15/download.aspx?share=IQAJlYdEGECRSoTp12wA7X68AUMvNab_R_Aihho57UPF29Q" \
+          -o data/Publications.xlsx
+
+          # Reviewer_papers.xlsx
+          echo "Downloading Reviewer_papers.xlsx..."
+          curl -L -A "$USER_AGENT" \
+          "https://upm365-my.sharepoint.com/personal/javier_conde_diaz_upm_es/_layouts/15/download.aspx?share=IQCcshWAM0WsT6V1RiGqA3icATZN0NZzxZ-UnnHar3OiygM" \
+          -o data/Reviewer_papers.xlsx
+
+          # Teaching_Projects.xlsx
+          echo "Downloading Teaching_Projects.xlsx..."
+          curl -L -A "$USER_AGENT" \
+          "https://upm365-my.sharepoint.com/personal/javier_conde_diaz_upm_es/_layouts/15/download.aspx?share=IQBlcCu4_hzQTJj_n_hiJm54AbGXcmeYpbHFxxKVjz6_CIE" \
+          -o data/Teaching_Projects.xlsx
+
+          # Tutor.xlsx
+          echo "Downloading Tutor.xlsx..."
+          curl -L -A "$USER_AGENT" \
+          "https://upm365-my.sharepoint.com/personal/javier_conde_diaz_upm_es/_layouts/15/download.aspx?share=IQBxDpJjqD3vTYsxNx_c9DlrAS0hYSbEQE-qCNMgqB2cYP4" \
+          -o data/Tutor.xlsx
+
+          # Visits.xlsx
+          echo "Downloading Visits.xlsx..."
+          curl -L -A "$USER_AGENT" \
+          "https://upm365-my.sharepoint.com/personal/javier_conde_diaz_upm_es/_layouts/15/download.aspx?share=IQAk0uCUskc0QIN4p-8bAdcLAUMR-N13MVyYFSBT0Zd1RKE" \
+          -o data/Visits.xlsx
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add data/*.xlsx
+          
+          if git diff --staged --quiet; then
+            echo "No hay cambios detectados en los archivos Excel."
+          else
+            git commit -m "Weekly update: $(date +'%Y-%m-%d')"
+            git push
+          fi
