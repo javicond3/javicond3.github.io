@@ -44,6 +44,9 @@ export default function PublicationCard({ publication }: Props) {
           {publication.location && (
             <span className="text-gray-600">, {publication.location}</span>
           )}
+          {publication.type && publication.type === "Preprint" && (
+            <span className="text-gray-600 italic">[{publication.type}]</span>
+          )}
           {publication.doi && (
             <>
               {". doi: "}

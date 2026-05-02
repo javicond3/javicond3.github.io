@@ -33,12 +33,12 @@ function formatMonthYear(date: string | null): string {
 }
 
 function journalLabel(p: Publication): string {
-  const jcr = p.jcr ? ` (JCR ${p.jcr})` : "";
+  const jcr = (p.jcr && p.jcr !== "-") ? ` (JCR ${p.jcr})` : "";
   return `"${p.title}". (${p.year}). ${p.authors}. ${p.journal}${jcr}.`;
 }
 
 function conferenceLabel(p: Publication): string {
-  const loc = p.location ? `. ${p.location}` : "";
+  const loc = (p.location && p.location !== "-") ? `. ${p.location}` : "";
   return `"${p.title}". (${p.year}). ${p.authors}. ${p.journal}${loc}.`;
 }
 
@@ -47,7 +47,7 @@ function bookLabel(p: Publication): string {
 }
 
 function otherPubLabel(p: Publication): string {
-  const type = p.type ? ` [${p.type}]` : "";
+  const type = (p.type && p.type !== "Otro") ? ` [${p.type}]` : "";
   return `"${p.title}". (${p.year}). ${p.authors}. ${p.journal}${type}.`;
 }
 
