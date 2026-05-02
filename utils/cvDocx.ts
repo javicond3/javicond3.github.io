@@ -466,6 +466,9 @@ function buildDocument(selectedItems: string[], cvData: CVData): Document {
         docChildren.push(h2("Other Publications", otherIdx.size, allOther.length));
         allOther.forEach((p, i) => {
           if (!otherIdx.has(i)) return;
+          const journal = p.journal !== "-"
+            ? p.journal
+            : (p.type === "Preprint" ? p.type : "");          
           const authors = p.authors.replace("J. Conde", "\u0001J. Conde\u0001");
           const authorRuns = authors.split("\u0001").map((segment, index) => index % 2 === 1 ? B(segment) : N(segment));
           docChildren.push(item([
@@ -473,8 +476,8 @@ function buildDocument(selectedItems: string[], cvData: CVData): Document {
             G(`(${p.year}). `),
             ...authorRuns,
             N(". "),
-            It(p.journal),
-            N("."),
+            It(journal),
+            N(journal ? "." : ""),
           ]));
         });
       }
