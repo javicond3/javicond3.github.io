@@ -49,7 +49,7 @@ jobs:
           # Publications.xlsx
           echo "Downloading Publications.xlsx..."
           curl -L -A "$USER_AGENT" \
-          "https://upm365-my.sharepoint.com/personal/javier_conde_diaz_upm_es/_layouts/15/download.aspx?share=IQAJlYdEGECRSoTp12wA7X68AUMvNab_R_Aihho57UPF29Q" \
+          "https://upm365-my.sharepoint.com/personal/javier_conde_diaz_upm_es/_layouts/15/download.aspx?share=IQA_jtdyFsZCSYB1GP85GDzEAemw68ncYuVRaIaLRAGIVg8" \
           -o data/Publications.xlsx
 
           # Reviewer_papers.xlsx
