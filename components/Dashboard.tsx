@@ -668,7 +668,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
             <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 pt-5 border-t border-gray-100">
               <div className="min-w-0">
                 <div className="flex items-baseline justify-between mb-3">
-                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Funding by year (*without private projects)</p>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Funding by year</p>
                   <span className="text-xs text-gray-400 font-medium">{fundD.totalLabel} total</span>
                 </div>
                 <FundingAxisChart chart={fundingChart} {...interaction} />
