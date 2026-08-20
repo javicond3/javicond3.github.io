@@ -1,4 +1,5 @@
 import EntryBullet, { SelectableProps } from "./EntryBullet";
+import CopyButton from "./CopyButton";
 
 interface SoftwareLike {
   title: string;
@@ -7,8 +8,10 @@ interface SoftwareLike {
 }
 
 export default function SoftwareCard({ project, selectable }: { project: SoftwareLike; selectable?: SelectableProps }) {
+  const copyText = [project.title, project.description].filter(Boolean).join('. ');
+
   return (
-    <div className="flex gap-0 items-start">
+    <div className="flex gap-0 items-start group">
       <EntryBullet selectable={selectable} />
       <div className="flex-1 min-w-0">
         <p className="text-[0.95rem] leading-snug text-gray-800">
@@ -28,6 +31,7 @@ export default function SoftwareCard({ project, selectable }: { project: Softwar
           {project.description && (
             <span className="text-gray-600">. {project.description}</span>
           )}
+          <CopyButton text={copyText} />
         </p>
       </div>
     </div>

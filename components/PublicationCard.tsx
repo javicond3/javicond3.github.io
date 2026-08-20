@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Publication } from "@/data/publications";
 import EntryBullet, { SelectableProps } from "./EntryBullet";
+import CopyButton from "./CopyButton";
+import { publicationToBibtex } from "@/utils/bibtex";
 
 interface Props {
   publication: Publication;
@@ -28,8 +30,17 @@ export default function PublicationCard({ publication, selectable }: Props) {
   const [open, setOpen] = useState(false);
   const hasDetails = !!publication.abstract || (publication.keywords && publication.keywords.length > 0);
 
+  const copyText = [
+    `“${publication.title}”.`,
+    `(${publication.year}).`,
+    `${publication.authors}.`,
+    publication.journal && `${publication.journal}${publication.status ? ` (${publication.status})` : ''}${publication.location ? `, ${publication.location}` : ''}${publication.type === 'Preprint' ? ' [Preprint]' : ''}.`,
+    publication.doi && `doi: ${publication.doi.startsWith('http') ? publication.doi : `https://doi.org/${publication.doi}`}.`,
+    publication.jcr && `(${publication.type === 'Conference' ? '' : 'JCR '}${publication.jcr}).`,
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className="flex gap-0 items-start">
+    <div className="flex gap-0 items-start group">
       <EntryBullet selectable={selectable} />
       {/* Content */}
       <div className="flex-1 min-w-0">
@@ -65,6 +76,8 @@ export default function PublicationCard({ publication, selectable }: Props) {
           {publication.jcr && (
             <span className="text-gray-600"> ({publication.type === 'Conference' ? '' : 'JCR '}{publication.jcr}).</span>
           )}
+          <CopyButton text={copyText} />
+          <CopyButton text={publicationToBibtex(publication)} label=".bib" />
         </p>
 
         {/* Expanded abstract */}

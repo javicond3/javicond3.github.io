@@ -1,4 +1,5 @@
 import EntryBullet, { SelectableProps } from "./EntryBullet";
+import CopyButton from "./CopyButton";
 
 interface ProjectLike {
   title: string;
@@ -28,8 +29,19 @@ export default function ProjectCard({ project, selectable }: { project: ProjectL
     .filter(Boolean)
     .join(' – ');
 
+  const title = project.title.replace(/\.+$/, '');
+  const funder = project.funder?.replace(/\.+$/, '') ?? '';
+  const hasScope = project.tipo === 'Competitive' && !!project.scope;
+  const copyText = [
+    dateRange && `(${dateRange})`,
+    title + (project.isIP ? ' [PI]' : ''),
+    funder,
+    hasScope && `${project.scope} project`,
+    project.money != null && formatMoney(project.money),
+  ].filter(Boolean).join('. ') + '.';
+
   return (
-    <div className="flex gap-0 items-start">
+    <div className="flex gap-0 items-start group">
       <EntryBullet selectable={selectable} />
 
       {/* Content */}
@@ -70,6 +82,7 @@ export default function ProjectCard({ project, selectable }: { project: ProjectL
               </>
             );
           })()}
+          <CopyButton text={copyText} />
         </p>
       </div>
     </div>
