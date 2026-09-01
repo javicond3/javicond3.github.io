@@ -169,7 +169,8 @@ function buildBio(cvData: CVData): Paragraph[] {
   ], 60));
 
   paras.push(para([
-    N("Since "), B("2023"), N(", I have been an "), B("Assistant Professor"),
+    N("From "), B("2023 to 2026"), N(", I have been an "), B("Assistant Professor"),
+    N("and since "), B("2026"), N(", I have been an "), B("Associate Professor"),
     N(" at the "), B("Universidad Politécnica de Madrid"),
     N(", in the Department of Telematic Systems Engineering. My research focuses on "),
     B("edge computing, open data, and artificial intelligence"),

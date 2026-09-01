@@ -554,7 +554,7 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
           <div className="flex-1 space-y-3">
             <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Javier Conde</h1>
             <p className="text-base text-gray-500 font-medium">
-              Assistant Professor · Universidad Politécnica de Madrid
+              Associate Professor · Universidad Politécnica de Madrid
             </p>
             <BioSection stats={cvData.bioStats} />
             <div className="flex flex-wrap gap-2 pt-1">

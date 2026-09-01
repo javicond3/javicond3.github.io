@@ -16,7 +16,7 @@ import Link from "next/link";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Javier Conde | Assistant Professor at Universidad Politécnica de Madrid (UPM)",
+  title: "Javier Conde | Associate Professor at Universidad Politécnica de Madrid (UPM)",
   description:
     "Personal academic profile of Javier Conde – publications, research interests, and contact.",
 };

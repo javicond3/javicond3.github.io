@@ -91,7 +91,7 @@ export default function Home() {
             Javier Conde
           </h1>
           <p className="text-base text-gray-500 font-medium">
-            Assistant Professor · Universidad Politécnica de Madrid
+            Associate Professor · Universidad Politécnica de Madrid
           </p>
           <BioSection stats={bioStats} />
 
