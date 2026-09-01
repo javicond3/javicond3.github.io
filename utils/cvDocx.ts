@@ -169,7 +169,7 @@ function buildBio(cvData: CVData): Paragraph[] {
   ], 60));
 
   paras.push(para([
-    N("From "), B("2023 to 2026"), N(", I have been an "), B("Assistant Professor"),
+    N("From "), B("2023 to 2026"), N(", I have been an "), B("Assistant Professor "),
     N("and since "), B("2026"), N(", I have been an "), B("Associate Professor"),
     N(" at the "), B("Universidad Politécnica de Madrid"),
     N(", in the Department of Telematic Systems Engineering. My research focuses on "),
@@ -317,7 +317,7 @@ function buildDocument(selectedItems: string[], cvData: CVData): Document {
   if (itemSet.has("bio")) {
     docChildren.push(h1("Javier Conde"));
     docChildren.push(new Paragraph({
-      children: [new TextRun({ text: "Assistant Professor · Universidad Politécnica de Madrid", size: SZ, italics: true, color: GRAY })],
+      children: [new TextRun({ text: "Associate Professor · Universidad Politécnica de Madrid", size: SZ, italics: true, color: GRAY })],
       spacing: { after: 100 },
     }));
     docChildren.push(...buildBio(cvData));
