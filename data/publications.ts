@@ -17,7 +17,31 @@ export interface Publication {
   publisher?: string;
   abstract: string;
   keywords: string[];
+  openAccess?: string[]; // links from the "Open Access" column (arXiv, TechRxiv, mirrors, ...)
+  upmRepo?: string; // link from "En el repo de UPM" (Archivo Digital UPM)
+  dataRepos?: string[]; // links from "Datos/Repos" (code, datasets: GitHub, Zenodo, ...)
+  diffusion?: string[]; // links from "Noticias/Posts" (diffusion / divulgación)
+  citations?: number; // from "Citas (con autocitas Google Scholar)"
 }
+
+const parseCitations = (raw: any): number | undefined => {
+  if (raw === undefined || raw === null || raw === '' || raw === '-') return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+};
+
+// Cells can hold "-", a bare value, or a bracketed comma-separated list like
+// "[https://a, https://b]". This normalizes all three into a clean string[].
+const parseList = (raw: any): string[] => {
+  if (raw === undefined || raw === null) return [];
+  let value = String(raw).trim();
+  if (!value || value === '-') return [];
+  if (value.startsWith('[') && value.endsWith(']')) value = value.slice(1, -1);
+  return value
+    .split(',')
+    .map((part) => part.replace(/\s+/g, ''))
+    .filter((part) => part && part !== '-');
+};
 
 const parseRows = (data: any[], tipo: string, prefix: string): Publication[] => {
   return data.filter((row: any) => row['Tipo'] === tipo).map((row: any, index) => {
@@ -46,8 +70,13 @@ const parseRows = (data: any[], tipo: string, prefix: string): Publication[] => 
       doi: (row['Link'] && row['Link'] !== "-") ? String(row['Link']) : '',
       jcr: (row['JCR'] && row['JCR'] !== "-") ? String(row['JCR']) : '',
       publisher: (row['Editorial'] && row['Editorial'] !== "-") ? String(row['Editorial']) : undefined,
-      abstract: row['Abstract'] ? String(row['Abstract']) : '',
+      abstract: row['Sumary'] ? String(row['Sumary']) : '',
       keywords: row['Keywords'] ? String(row['Keywords']).split(',').map((k: string) => k.trim()) : [],
+      openAccess: parseList(row['Open Access']),
+      upmRepo: (row['En el repo de UPM'] && row['En el repo de UPM'] !== "-") ? parseList(row['En el repo de UPM'])[0] ?? String(row['En el repo de UPM']).trim() : undefined,
+      dataRepos: parseList(row['Datos/Repos']),
+      diffusion: parseList(row['Noticias/Posts']),
+      citations: parseCitations(row['Citas (con autocitas Google Scholar)']),
     };
   });
 };
@@ -90,8 +119,13 @@ export const getOtherPublications = (): Publication[] => {
         status,
         doi: (row['Link'] && row['Link'] !== "-") ? String(row['Link']) : '',
         jcr: (row['JCR'] && row['JCR'] !== "-") ? String(row['JCR']) : '',
-        abstract: row['Abstract'] ? String(row['Abstract']) : '',
+        abstract: row['Sumary'] ? String(row['Sumary']) : '',
         keywords: row['Keywords'] ? String(row['Keywords']).split(',').map((k: string) => k.trim()) : [],
+        openAccess: parseList(row['Open Access']),
+        upmRepo: (row['En el repo de UPM'] && row['En el repo de UPM'] !== "-") ? parseList(row['En el repo de UPM'])[0] ?? String(row['En el repo de UPM']).trim() : undefined,
+        dataRepos: parseList(row['Datos/Repos']),
+        diffusion: parseList(row['Noticias/Posts']),
+        citations: parseCitations(row['Citas (con autocitas Google Scholar)']),
       };
     });
 };

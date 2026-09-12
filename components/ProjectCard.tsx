@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+import { FaChevronDown } from "react-icons/fa";
 import EntryBullet, { SelectableProps } from "./EntryBullet";
 import CopyButton from "./CopyButton";
 
@@ -11,6 +15,7 @@ interface ProjectLike {
   money?: number;
   isIP: boolean;
   link?: string;
+  convocatoria?: string;
 }
 
 function formatMonthYear(date: Date | string | null): string {
@@ -25,6 +30,9 @@ function formatMoney(amount: number): string {
 }
 
 export default function ProjectCard({ project, selectable }: { project: ProjectLike; selectable?: SelectableProps }) {
+  const [open, setOpen] = useState(false);
+  const hasDetails = !!project.convocatoria;
+
   const dateRange = [formatMonthYear(project.startDate), formatMonthYear(project.endDate)]
     .filter(Boolean)
     .join(' – ');
@@ -83,7 +91,36 @@ export default function ProjectCard({ project, selectable }: { project: ProjectL
             );
           })()}
           <CopyButton text={copyText} />
+          {hasDetails && (
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+              aria-label={open ? "Hide details" : "Show details"}
+              className="inline-flex align-middle items-center justify-center w-5 h-5 rounded-md border ml-1 text-gray-500 hover:text-white transition-colors"
+              style={{ borderColor: "#d1d5db" }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = "#2ecfba";
+                (e.currentTarget as HTMLElement).style.borderColor = "#2ecfba";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
+                (e.currentTarget as HTMLElement).style.borderColor = "#d1d5db";
+              }}
+            >
+              <FaChevronDown size={9} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+            </button>
+          )}
         </p>
+
+        {open && project.convocatoria && (
+          <div className="mt-2 space-y-1">
+            <p className="text-sm leading-relaxed text-gray-700 text-justify">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 mr-1">Call:</span>
+              {project.convocatoria}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

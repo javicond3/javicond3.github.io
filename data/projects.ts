@@ -13,6 +13,7 @@ export interface Project {
   money?: number;
   isIP: boolean;
   link?: string;
+  convocatoria?: string;
 }
 
 const MONTHS_EN = [
@@ -54,6 +55,11 @@ const loadProjects = (): Project[] => {
     const ipYo = row['IP-YO'];
     const isIP = typeof ipYo === 'string' && ipYo.trim().toLowerCase() === 'yes';
 
+    const rawConvocatoria = row['Convocatoria'];
+    const convocatoria = (rawConvocatoria && String(rawConvocatoria).trim() !== '-')
+      ? String(rawConvocatoria).replace(/\r\n/g, ' ').trim()
+      : undefined;
+
     return {
       id: `proj${index}`,
       tipo,
@@ -65,6 +71,7 @@ const loadProjects = (): Project[] => {
       money: tipo === 'Competitive' ? money : undefined,
       isIP,
       link: row['Link'] ? String(row['Link']) : undefined,
+      convocatoria,
     };
   });
 };
