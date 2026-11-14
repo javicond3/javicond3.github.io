@@ -3,17 +3,19 @@ import path from 'path';
 import fs from 'fs';
 
 export interface Coauthor {
-  name: string;        // full name, e.g. "Pedro Reviriego"
-  firma: string;       // paper-signature format, e.g. "P. Reviriego"
-  initials: string;    // exactly two letters for the node, e.g. "PR"
-  institution: string; // from the shared paper / Scholar / web ('' when unknown)
-  country: string;     // English country name ('' when unknown)
-  hindex: number;      // Google Scholar h-index (0 when unknown)
-  scholar: string;     // Google Scholar profile URL ('' when none)
-  papers: number;      // shared papers, computed live from Hoja1 author lists
-  me: boolean;         // the central node (Javier)
-  inGraph: boolean;    // curated in the sheet: relevant enough for the graph
-  paperIds: string[];  // shared papers (Hoja1 ids) linked via the firma
+  name: string;          // full name, e.g. "Pedro Reviriego"
+  firma: string;         // paper-signature format, e.g. "P. Reviriego"
+  initials: string;      // exactly two letters for the node, e.g. "PR"
+  institution: string;   // primary institution (first affiliation, '' when unknown)
+  country: string;       // primary country ('' when unknown)
+  institutions: string[]; // every affiliation across his shared papers
+  countries: string[];   // every affiliation country
+  hindex: number;        // Google Scholar h-index (0 when unknown)
+  scholar: string;       // Google Scholar profile URL ('' when none)
+  papers: number;        // shared papers, computed live from Hoja1 author lists
+  me: boolean;           // the central node (Javier)
+  inGraph: boolean;      // curated in the sheet: relevant enough for the graph
+  paperIds: string[];    // shared papers (Hoja1 ids) linked via the firma
 }
 
 export interface PaperNode {
@@ -26,11 +28,20 @@ export interface PaperNode {
   doi: string;
 }
 
+export interface CountryAgg {
+  name: string;
+  count: number;   // co-authors with an affiliation in this country (multi-affiliation counts in each)
+  maxH: number;
+  avgH: number;
+  topH: { name: string; scholar: string; hindex: number }[];
+  topPapers: { name: string; scholar: string; papers: number }[];
+}
+
 export interface CoauthorData {
   coauthors: Coauthor[];
   papers: PaperNode[];
   paperAuthors: Record<string, number[]>; // paper id -> coauthor indexes
-  countries: Record<string, { name: string; count: number; maxH: number; avgH: number }>;
+  countries: Record<string, CountryAgg>;
 }
 
 const norm = (s: string): string =>
@@ -57,6 +68,15 @@ const parseNum = (raw: any): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
+// "; "-separated cells carry arrays (multi-affiliation authors)
+const parseList = (raw: any): string[] =>
+  raw
+    ? String(raw)
+        .split(';')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+
 export function getCoauthorData(): CoauthorData {
   const empty: CoauthorData = { coauthors: [], papers: [], paperAuthors: {}, countries: {} };
   try {
@@ -71,7 +91,6 @@ export function getCoauthorData(): CoauthorData {
     const rows: any[] = xlsx.utils.sheet_to_json(wb.Sheets[sheetName]);
     const hoja1: any[] = xlsx.utils.sheet_to_json(wb.Sheets['Hoja1']);
 
-    // Papers from Hoja1
     const papers: PaperNode[] = [];
     const paperAuthors: Record<string, number[]> = {};
     const firma2idx = new Map<string, number>();
@@ -82,12 +101,16 @@ export function getCoauthorData(): CoauthorData {
         const name = String(r['Author']).trim().replace(/\s*\(me\)\s*$/i, '');
         const firma = String(r['Firma'] || name).trim();
         firma2idx.set(norm(firma), i);
+        const institutions = parseList(r['Institución']);
+        const countries = parseList(r['País']);
         return {
           name,
           firma,
           initials: toInitials(firma),
-          institution: r['Institución'] ? String(r['Institución']).trim() : '',
-          country: r['País'] ? String(r['País']).trim() : '',
+          institution: institutions[0] || '',
+          country: countries[0] || '',
+          institutions,
+          countries,
           hindex: parseNum(r['h-index']),
           scholar: r['Google Scholar'] ? String(r['Google Scholar']).trim() : '',
           papers: 0,
@@ -124,17 +147,27 @@ export function getCoauthorData(): CoauthorData {
     }
     for (const c of coauthors) c.papers = c.paperIds.length || (c.me ? 0 : 1);
 
-    // Country aggregates (co-authors only, not Javier)
-    const countries: CoauthorData['countries'] = {};
+    // Country aggregates: a multi-affiliation author counts in each country
+    const countries: Record<string, CountryAgg> = {};
     for (const c of coauthors) {
-      if (c.me || !c.country) continue;
-      const a = (countries[c.country] ||= { name: c.country, count: 0, maxH: 0, avgH: 0 });
-      a.count += 1;
-      a.maxH = Math.max(a.maxH, c.hindex);
+      if (c.me) continue;
+      for (const country of c.countries) {
+        const a = (countries[country] ||= { name: country, count: 0, maxH: 0, avgH: 0, topH: [], topPapers: [] });
+        a.count += 1;
+        a.maxH = Math.max(a.maxH, c.hindex);
+      }
     }
-    for (const a of Object.values(countries)) {
-      const hs = coauthors.filter((c) => !c.me && c.country === a.name).map((c) => c.hindex);
-      a.avgH = Math.round((hs.reduce((s, h) => s + h, 0) / hs.length) * 10) / 10;
+    for (const [name, a] of Object.entries(countries)) {
+      const members = coauthors.filter((c) => !c.me && c.countries.includes(name));
+      a.avgH = Math.round((members.reduce((s, c) => s + c.hindex, 0) / members.length) * 10) / 10;
+      a.topH = [...members]
+        .sort((x, y) => y.hindex - x.hindex)
+        .slice(0, 3)
+        .map((c) => ({ name: c.name, scholar: c.scholar, hindex: c.hindex }));
+      a.topPapers = [...members]
+        .sort((x, y) => y.papers - x.papers)
+        .slice(0, 3)
+        .map((c) => ({ name: c.name, scholar: c.scholar, papers: c.papers }));
     }
 
     return { coauthors, papers, paperAuthors, countries };

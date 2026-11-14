@@ -29,3 +29,6 @@ export const NAME2ISO: Record<string, string> = {
   "Uruguay": "UY",
   "Vietnam": "VN"
 };
+
+// Label anchor (bbox center) per collaborating country, for the author-count badges
+export const MAP_LABELS: Record<string, { x: number; y: number }> = {"AR": {"x": 323.6, "y": 357.1}, "AT": {"x": 536.8, "y": 117.4}, "BE": {"x": 512.0, "y": 109.7}, "CA": {"x": 231.1, "y": 76.5}, "CH": {"x": 522.9, "y": 119.9}, "CN": {"x": 789.9, "y": 150.5}, "DE": {"x": 529.2, "y": 107.9}, "DK": {"x": 528.9, "y": 93.7}, "EC": {"x": 283.1, "y": 255.0}, "ES": {"x": 491.1, "y": 139.3}, "FI": {"x": 572.4, "y": 69.5}, "FR": {"x": 506.9, "y": 121.5}, "GB": {"x": 491.9, "y": 99.2}, "IN": {"x": 730.0, "y": 189.7}, "IL": {"x": 597.4, "y": 162.8}, "IT": {"x": 535.0, "y": 133.7}, "JP": {"x": 881.9, "y": 143.7}, "MX": {"x": 216.8, "y": 184.3}, "NL": {"x": 514.5, "y": 105.2}, "TW": {"x": 836.2, "y": 184.3}, "UY": {"x": 344.9, "y": 340.4}, "US": {"x": 168.4, "y": 124.7}, "VN": {"x": 793.8, "y": 205.6}};
