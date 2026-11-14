@@ -11,7 +11,7 @@ import BioSection from "@/components/BioSection";
 import SummaryCards from "@/components/SummaryCards";
 import Dashboard from "@/components/Dashboard";
 import CoauthorGraph from "@/components/CoauthorGraph";
-import { getCoauthors } from "@/data/coauthors";
+import { getCoauthorData } from "@/data/coauthors";
 import { buildDashboardData } from "@/utils/buildDashboardData";
 import { getBioStats } from "@/data/bioStats";
 import AboutToggle from "@/components/AboutToggle";
@@ -127,7 +127,7 @@ export default function Home() {
       <Dashboard data={dashboardData} />
 
       {/* ── Co-author network (private: only renders when logged in) ── */}
-      <CoauthorGraph data={getCoauthors()} />
+      <CoauthorGraph data={getCoauthorData()} />
 
       {/* ── Position and Education ────────────────────────────────── */}
       <AboutToggle count={aboutCount}>
