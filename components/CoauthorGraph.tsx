@@ -69,6 +69,7 @@ function buildMatcher(query: string): MatchFn | null {
       c.institutions.some((i2) => i2.toLowerCase().includes(t)) ||
       c.countries.some((ct) => ct.toLowerCase().includes(t));
   });
+
   return (c) => tests.every((f) => f(c));
 }
 
@@ -171,7 +172,10 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
   const [hoverPaper, setHoverPaper] = useState<string | null>(null);
   const [hoverInst, setHoverInst] = useState<string | null>(null);
   const [view, setView] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [selPaper, setSelPaper] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const [hoverCountry, setHoverCountry] = useState<string | null>(null);
+  const [selCountry, setSelCountry] = useState<string | null>(null);
   const [mapView, setMapView] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [sortKey, setSortKey] = useState<'name' | 'institution' | 'country' | 'hindex' | 'papers'>('papers');
   const [sortAsc, setSortAsc] = useState(false);
@@ -185,13 +189,20 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
 
   useEffect(() => {
     setAuthed(isAuthenticated());
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
   if (!authed || coauthors.length === 0) return null;
 
   const matcher = buildMatcher(query);
   const matchCount = matcher ? coauthors.filter(matcher).length : 0;
 
-  const paperVisible = (pid: string) => showPapers || (selected !== null && lay.paperPos[pid]?.anchor === selected);
+  const paperVisible = (pid: string) =>
+    showPapers ||
+    (selected !== null && lay.paperPos[pid]?.anchor === selected) ||
+    (selInst !== null && (lay.instMembers[selInst] || []).includes(lay.paperPos[pid]?.anchor));
   const authorR = (i: number) => 11 + 8 * Math.sqrt(coauthors[i].papers / lay.maxPapers);
 
   /* focus: with a selection, everything not connected greys out */
@@ -210,7 +221,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
   const paperInFocus = (pid: string) => {
     if (!hasFocus) return true;
     if (selected !== null) return lay.paperPos[pid]?.anchor === selected;
-    return false;
+    return (lay.instMembers[selInst!] || []).includes(lay.paperPos[pid]?.anchor);
   };
   const dim = (i: number) => (matcher && !matcher(coauthors[i]) ? 0.12 : 1);
 
@@ -236,8 +247,8 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
   };
 
   const popupAuthor = focus !== null ? coauthors[focus] : null;
-  const popupPaper = hoverPaper !== null ? paperById.get(hoverPaper) ?? null : null;
-  const popupInst = hoverInst !== null ? hoverInst : null;
+  const popupPaper = selPaper !== null ? paperById.get(selPaper) ?? null : hoverPaper !== null ? paperById.get(hoverPaper) ?? null : null;
+  const popupInst = hoverInst !== null ? hoverInst : selInst;
 
   const sortedRows = [...coauthors].sort((a, b) => {
     const va = a[sortKey];
@@ -269,6 +280,73 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
     cursor: 'pointer',
     fontSize: 13,
   };
+
+  const countryPopupBody = (info: (typeof countryByIso2)[string]) => (
+    <>
+      <div style={{ fontWeight: 700, marginBottom: 2 }}>{info.name}</div>
+      <div>
+        <strong>{info.count}</strong> co-author{info.count === 1 ? '' : 's'}
+      </div>
+      <div>
+        <strong>{info.papers}</strong> shared paper{info.papers === 1 ? '' : 's'} · <strong>{info.citations}</strong> total citation{info.citations === 1 ? '' : 's'}
+      </div>
+      <div style={{ color: '#64748b', marginBottom: 6 }}>
+        max h-index {info.maxH} · avg {info.avgH}
+      </div>
+      {info.topCited.length > 0 && (
+        <div style={{ marginBottom: 4 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Top cited papers</div>
+          {info.topCited.map((p) => (
+            <div key={p.title} style={{ fontSize: 12 }}>
+              {p.doi ? (
+                <a href={p.doi} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
+                  {p.title.length > 55 ? p.title.slice(0, 55) + '…' : p.title}
+                </a>
+              ) : (
+                p.title
+              )}{' '}
+              <span style={{ color: '#94a3b8' }}>{p.citations} cit.</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {info.topH.length > 0 && (
+        <div style={{ marginBottom: 4 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Top h-index</div>
+          {info.topH.map((a) => (
+            <div key={a.name} style={{ fontSize: 12 }}>
+              {a.scholar ? (
+                <a href={a.scholar} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
+                  {a.name}
+                </a>
+              ) : (
+                a.name
+              )}{' '}
+              <span style={{ color: '#94a3b8' }}>h={a.hindex}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {info.topPapers.length > 0 && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Most collaborations</div>
+          {info.topPapers.map((a) => (
+            <div key={a.name} style={{ fontSize: 12 }}>
+              {a.scholar ? (
+                <a href={a.scholar} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
+                  {a.name}
+                </a>
+              ) : (
+                a.name
+              )}{' '}
+              <span style={{ color: '#94a3b8' }}>{a.papers} papers</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
 
   return (
     <section style={{ marginTop: 24 }}>
@@ -452,7 +530,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                       onMouseEnter={() => setHoverPaper(pid)}
                       onMouseLeave={() => setHoverPaper(null)}
                       style={{ cursor: 'pointer' }}
-                      onClick={() => p.doi && window.open(p.doi, '_blank')}
+                      onClick={() => setSelPaper(selPaper === pid ? null : pid)}
                       opacity={off ? 0.35 : 1}
                     >
                       <circle cx={pp.x} cy={pp.y} r={pp.r} fill={off ? COL_DIM : active ? '#d98a1e' : COL_PAPER} stroke="#fff" strokeWidth={1.5} />
@@ -506,9 +584,81 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
               </g>
             </svg>
 
+            {/* mobile: popup content below the graph */}
+            {isMobile && (popupPaper || popupAuthor || popupInst) && (
+              <div style={{ borderTop: '1px solid #e2e8f0', padding: '12px 14px', fontSize: 13, background: '#fff' }}>
+                {popupPaper ? (
+                  <>
+                    <div style={{ fontWeight: 700, marginBottom: 4 }}>{popupPaper.title}</div>
+                    <div style={{ color: '#64748b', marginBottom: 4 }}>
+                      {popupPaper.year}
+                      {popupPaper.venue ? ` · ${popupPaper.venue}` : ''}
+                    </div>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>{popupPaper.citations}</strong> citation{popupPaper.citations === 1 ? '' : 's'}
+                      {popupPaper.jcr && (
+                        <span style={{ marginLeft: 8, background: '#eef2ff', color: '#4338ca', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>
+                          {popupPaper.jcr}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ color: '#64748b', fontSize: 12 }}>
+                      {(paperAuthors[popupPaper.id] || []).map((i) => coauthors[i].name).join(', ') || '—'}
+                    </div>
+                    {popupPaper.doi && (
+                      <div style={{ marginTop: 4, fontSize: 12 }}>
+                        <a href={popupPaper.doi} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
+                          Open the paper ↗
+                        </a>
+                      </div>
+                    )}
+                  </>
+                ) : popupInst ? (
+                  <>
+                    <div style={{ fontWeight: 700, marginBottom: 2 }}>{popupInst}</div>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>{lay.instCount[popupInst]}</strong> co-author{lay.instCount[popupInst] === 1 ? '' : 's'} in the graph
+                    </div>
+                    <div style={{ color: '#64748b', fontSize: 12 }}>
+                      {(lay.instMembers[popupInst] || [])
+                        .slice()
+                        .sort((a, b) => coauthors[b].papers - coauthors[a].papers)
+                        .slice(0, 5)
+                        .map((i) => (
+                          <div key={i}>• {coauthors[i].name}</div>
+                        ))}
+                    </div>
+                  </>
+                ) : popupAuthor ? (
+                  <>
+                    <div style={{ fontWeight: 700, marginBottom: 2 }}>{popupAuthor.name}</div>
+                    <div style={{ color: '#64748b', marginBottom: 4 }}>
+                      {popupAuthor.institutions.join('; ') || '—'}
+                      {popupAuthor.countries.length ? ` · ${popupAuthor.countries.join('; ')}` : ''}
+                    </div>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>{popupAuthor.papers}</strong> shared paper{popupAuthor.papers === 1 ? '' : 's'}
+                      {popupAuthor.hindex > 0 && (
+                        <>
+                          {' · '}h-index <strong>{popupAuthor.hindex}</strong>
+                        </>
+                      )}
+                    </div>
+                    {popupAuthor.scholar && (
+                      <div style={{ fontSize: 12 }}>
+                        <a href={popupAuthor.scholar} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
+                          Google Scholar ↗
+                        </a>
+                      </div>
+                    )}
+                  </>
+                ) : null}
+              </div>
+            )}
+
             {/* popup: paper */}
-            {popupPaper && view && (
-              <div data-popup style={{ ...popupStyle(view), pointerEvents: 'none' }}>
+            {popupPaper && view && !isMobile && (
+              <div data-popup style={{ ...popupStyle(view), pointerEvents: 'auto' }}>
                 <div style={{ fontWeight: 700, marginBottom: 4 }}>{popupPaper.title}</div>
                 <div style={{ color: '#64748b', marginBottom: 4 }}>
                   {popupPaper.year}
@@ -517,15 +667,28 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                 <div style={{ marginBottom: 4 }}>
                   <strong>{popupPaper.citations}</strong> citation{popupPaper.citations === 1 ? '' : 's'}
                 </div>
+                {popupPaper.jcr && (
+                  <div style={{ marginBottom: 4 }}>
+                    <span style={{ background: '#eef2ff', color: '#4338ca', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>
+                      {popupPaper.jcr}
+                    </span>
+                  </div>
+                )}
                 <div style={{ color: '#64748b', fontSize: 12 }}>
                   {(paperAuthors[popupPaper.id] || []).map((i) => coauthors[i].name).join(', ') || '—'}
                 </div>
-                {popupPaper.doi && <div style={{ marginTop: 4, fontSize: 12, color: '#2563eb' }}>Click the node to open the paper ↗</div>}
+                {popupPaper.doi && (
+                  <div style={{ marginTop: 4, fontSize: 12 }}>
+                    <a href={popupPaper.doi} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
+                      Open the paper ↗
+                    </a>
+                  </div>
+                )}
               </div>
             )}
 
             {/* popup: institution */}
-            {popupInst && !popupPaper && view && (
+            {popupInst && !popupPaper && view && !isMobile && (
               <div data-popup style={{ ...popupStyle(view), pointerEvents: 'none' }}>
                 <div style={{ fontWeight: 700, marginBottom: 2 }}>{popupInst}</div>
                 <div style={{ marginBottom: 4 }}>
@@ -547,7 +710,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
             )}
 
             {/* popup: author */}
-            {popupAuthor && !popupPaper && !popupInst && view && (
+            {popupAuthor && !popupPaper && !popupInst && view && !isMobile && (
               <div data-popup style={{ ...popupStyle(view), pointerEvents: 'auto' }}>
                 <div style={{ fontWeight: 700, marginBottom: 2 }}>{popupAuthor.name}</div>
                 <div style={{ color: '#64748b', marginBottom: 4 }}>
@@ -633,6 +796,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                       style={info ? { cursor: 'pointer' } : undefined}
                       onMouseEnter={() => info && setHoverCountry(f.iso2)}
                       onMouseLeave={() => setHoverCountry(null)}
+                      onClick={() => info && setSelCountry(selCountry === f.iso2 ? null : f.iso2)}
                     />
                   );
                 })}
@@ -649,49 +813,14 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                   );
                 })}
               </svg>
-              {hoverCountry && countryByIso2[hoverCountry] && mapView && (
+              {!isMobile && hoverCountry && countryByIso2[hoverCountry] && mapView && (
                 <div data-popup style={{ ...popupStyle(mapView), pointerEvents: 'auto', minWidth: 210 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 2 }}>{countryByIso2[hoverCountry].name}</div>
-                  <div>
-                    <strong>{countryByIso2[hoverCountry].count}</strong> co-author{countryByIso2[hoverCountry].count === 1 ? '' : 's'}
-                  </div>
-                  <div style={{ color: '#64748b', marginBottom: 6 }}>
-                    max h-index {countryByIso2[hoverCountry].maxH} · avg {countryByIso2[hoverCountry].avgH}
-                  </div>
-                  {countryByIso2[hoverCountry].topH.length > 0 && (
-                    <div style={{ marginBottom: 4 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Top h-index</div>
-                      {countryByIso2[hoverCountry].topH.map((a) => (
-                        <div key={a.name} style={{ fontSize: 12 }}>
-                          {a.scholar ? (
-                            <a href={a.scholar} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
-                              {a.name}
-                            </a>
-                          ) : (
-                            a.name
-                          )}{' '}
-                          <span style={{ color: '#94a3b8' }}>h={a.hindex}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {countryByIso2[hoverCountry].topPapers.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Most collaborations</div>
-                      {countryByIso2[hoverCountry].topPapers.map((a) => (
-                        <div key={a.name} style={{ fontSize: 12 }}>
-                          {a.scholar ? (
-                            <a href={a.scholar} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
-                              {a.name}
-                            </a>
-                          ) : (
-                            a.name
-                          )}{' '}
-                          <span style={{ color: '#94a3b8' }}>{a.papers} papers</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {countryPopupBody(countryByIso2[hoverCountry])}
+                </div>
+              )}
+              {isMobile && selCountry && countryByIso2[selCountry] && (
+                <div style={{ borderTop: '1px solid #e2e8f0', padding: '12px 14px', fontSize: 13, background: '#fff' }}>
+                  {countryPopupBody(countryByIso2[selCountry])}
                 </div>
               )}
             </div>

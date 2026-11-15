@@ -26,6 +26,7 @@ export interface PaperNode {
   venue: string;
   citations: number;
   doi: string;
+  jcr: string;         // JCR quartile or CORE rank ('' when none)
 }
 
 export interface CountryAgg {
@@ -35,6 +36,9 @@ export interface CountryAgg {
   avgH: number;
   topH: { name: string; scholar: string; hindex: number }[];
   topPapers: { name: string; scholar: string; papers: number }[];
+  papers: number;      // shared papers with co-authors in this country
+  citations: number;   // total citations across those papers
+  topCited: { title: string; citations: number; doi: string }[];
 }
 
 export interface CoauthorData {
@@ -134,6 +138,7 @@ export function getCoauthorData(): CoauthorData {
         venue: row['Revista'] && row['Revista'] !== '-' ? String(row['Revista']).trim() : '',
         citations: parseNum(row['Citas (con autocitas Google Scholar)']),
         doi: row['Link'] && row['Link'] !== '-' ? String(row['Link']).trim() : '',
+        jcr: row['JCR'] && row['JCR'] !== '-' ? String(row['JCR']).trim() : '',
       });
       const seen = new Set<number>();
       for (const entry of String(aut).split(',')) {
@@ -152,7 +157,7 @@ export function getCoauthorData(): CoauthorData {
     for (const c of coauthors) {
       if (c.me) continue;
       for (const country of c.countries) {
-        const a = (countries[country] ||= { name: country, count: 0, maxH: 0, avgH: 0, topH: [], topPapers: [] });
+        const a = (countries[country] ||= { name: country, count: 0, maxH: 0, avgH: 0, topH: [], topPapers: [], papers: 0, citations: 0, topCited: [] });
         a.count += 1;
         a.maxH = Math.max(a.maxH, c.hindex);
       }
@@ -168,6 +173,16 @@ export function getCoauthorData(): CoauthorData {
         .sort((x, y) => y.papers - x.papers)
         .slice(0, 3)
         .map((c) => ({ name: c.name, scholar: c.scholar, papers: c.papers }));
+      const pmap = new Map(papers.map((p) => [p.id, p]));
+      const pids = [...new Set(members.flatMap((c) => c.paperIds))];
+      a.papers = pids.length;
+      a.citations = pids.reduce((sum, id) => sum + (pmap.get(id)?.citations || 0), 0);
+      a.topCited = pids
+        .map((id) => pmap.get(id)!)
+        .filter(Boolean)
+        .sort((x, y) => y.citations - x.citations)
+        .slice(0, 3)
+        .map((p) => ({ title: p.title, citations: p.citations, doi: p.doi }));
     }
 
     return { coauthors, papers, paperAuthors, countries };
