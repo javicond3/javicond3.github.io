@@ -17,15 +17,18 @@ const COL_COUNTRY_NONE = '#e6eaef';
 const W = 1000;
 const H = 600;
 
-/* heatmap: few co-authors -> blue, many -> red (log scale) */
+/* heatmap: ColorBrewer YlOrRd, few co-authors -> light yellow, many -> dark red (log scale) */
+const HEAT_STOPS = ['#ffffcc', '#ffeda0', '#fed976', '#feb24c', '#fd8d3c', '#fc4e2a', '#e31a1c', '#bd0026', '#800026'].map(
+  (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]
+);
 function heatColor(count: number, maxCount: number, active: boolean): string {
   const t = Math.log(count) / Math.log(Math.max(2, maxCount));
-  const lerp = (a: number, b: number) => Math.round(a + (b - a) * t);
-  const r = lerp(96, 224);
-  const g = lerp(165, 49);
-  const b = lerp(214, 49);
-  if (active) return `rgb(${Math.max(0, r - 30)},${Math.max(0, g - 20)},${Math.max(0, b - 20)})`;
-  return `rgb(${r},${g},${b})`;
+  const x = t * (HEAT_STOPS.length - 1);
+  const i = Math.min(HEAT_STOPS.length - 2, Math.floor(x));
+  const f = x - i;
+  const c = HEAT_STOPS[i].map((a, k) => Math.round(a + (HEAT_STOPS[i + 1][k] - a) * f));
+  if (active) return `rgb(${c.map((v) => Math.max(0, v - 35)).join(',')})`;
+  return `rgb(${c.join(',')})`;
 }
 
 /* ---------- helpers ---------- */
@@ -44,8 +47,7 @@ type MatchFn = (c: Coauthor) => boolean;
 function buildMatcher(query: string): MatchFn | null {
   const q = query.trim().toLowerCase();
   if (!q) return null;
-  const tokens = q.split(/\s+/);
-  const tests: MatchFn[] = tokens.map((t) => {
+  const termTest = (t: string): MatchFn => {
     let m = t.match(/^(h|hindex|papers|p)(>=|<=|>|<|=)(\d+)$/);
     if (m) {
       const field = m[1].startsWith('h') ? 'hindex' : 'papers';
@@ -71,9 +73,26 @@ function buildMatcher(query: string): MatchFn | null {
       c.firma.toLowerCase().includes(t) ||
       c.institutions.some((i2) => i2.toLowerCase().includes(t)) ||
       c.countries.some((ct) => ct.toLowerCase().includes(t));
+  };
+
+  /* "a b | c" / "a b OR c": OR between groups, AND inside a group, "-x" / "!x" negates a term */
+  const groups = q
+    .split(/\s+or\s+|\|/)
+    .map((g) => g.trim())
+    .filter(Boolean);
+  const groupFns = groups.map((g) => {
+    const tests: MatchFn[] = g.split(/\s+/).map((tok) => {
+      const neg = tok.startsWith('-') || tok.startsWith('!');
+      const f = termTest(neg ? tok.slice(1) : tok);
+      const nf: MatchFn = (c) => !f(c);
+      return neg ? nf : f;
+    });
+    const gf: MatchFn = (c) => tests.every((f) => f(c));
+    return gf;
   });
 
-  return (c) => tests.every((f) => f(c));
+  const all: MatchFn = (c) => groupFns.some((f) => f(c));
+  return all;
 }
 
 /* ---------- layout ---------- */
@@ -189,7 +208,9 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
   const [authed, setAuthed] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState('');
-  const [showPapers, setShowPapers] = useState(false);
+  const [showPapers, setShowPapers] = useState(true);
+  const [showAuthors, setShowAuthors] = useState(true);
+  const [showInsts, setShowInsts] = useState(true);
   const [selected, setSelected] = useState<number | null>(null);
   const [selInst, setSelInst] = useState<string | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
@@ -251,11 +272,16 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
 
   const matcher = buildMatcher(query);
   const matchCount = matcher ? coauthors.filter(matcher).length : 0;
+  const resetAll = () => {
+    setSelected(null);
+    setSelInst(null);
+    setSelPaper(null);
+  };
+  const instMatch = (name: string) => !matcher || (layBase.instMembers[name] || []).some((a) => matcher(coauthors[a]));
+  const paperMatch = (pid: string) => !matcher || (paperAuthors[pid] || []).some((a) => matcher(coauthors[a]));
 
   const paperVisible = (pid: string) =>
-    focusSets !== null
-      ? focusSets.papers.has(pid)
-      : showPapers || selected === lay.meIdx;
+    focusSets !== null ? focusSets.papers.has(pid) : showPapers && showAuthors;
   const authorR = (i: number) => 11 + 8 * Math.sqrt(coauthors[i].hindex / lay.maxH);
 
   /* focus: with a selection, everything else disappears and the graph re-layouts */
@@ -286,9 +312,23 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
     return style;
   };
 
-  const popupAuthor = focus !== null ? coauthors[focus] : null;
-  const popupPaper = selPaper !== null ? paperById.get(selPaper) ?? null : hoverPaper !== null ? paperById.get(hoverPaper) ?? null : null;
-  const popupInst = hoverInst !== null ? hoverInst : selInst;
+  const popupAuthor = isMobile
+    ? focus !== null
+      ? coauthors[focus]
+      : null
+    : hovered !== null && hovered !== selected
+      ? coauthors[hovered]
+      : null;
+  const popupPaper = isMobile
+    ? selPaper !== null
+      ? paperById.get(selPaper) ?? null
+      : hoverPaper !== null
+        ? paperById.get(hoverPaper) ?? null
+        : null
+    : hoverPaper !== null && hoverPaper !== selPaper
+      ? paperById.get(hoverPaper) ?? null
+      : null;
+  const popupInst = isMobile ? (hoverInst !== null ? hoverInst : selInst) : hoverInst !== null && hoverInst !== selInst ? hoverInst : null;
 
   const sortedRows = [...coauthors].sort((a, b) => {
     const va = a[sortKey];
@@ -436,8 +476,16 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
               }}
             />
             <label style={{ fontSize: 13, color: '#334155', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="checkbox" checked={showAuthors} onChange={(e) => setShowAuthors(e.target.checked)} />
+              Authors
+            </label>
+            <label style={{ fontSize: 13, color: '#334155', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="checkbox" checked={showInsts} onChange={(e) => setShowInsts(e.target.checked)} />
+              Institutions
+            </label>
+            <label style={{ fontSize: 13, color: '#334155', display: 'flex', alignItems: 'center', gap: 6 }}>
               <input type="checkbox" checked={showPapers} onChange={(e) => setShowPapers(e.target.checked)} />
-              Show all papers
+              Papers
             </label>
             {matcher && (
               <span style={{ fontSize: 12, color: '#64748b' }}>
@@ -491,7 +539,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
             >
               <g transform={`translate(${offset.x} ${offset.y}) scale(${zoom})`}>
                 {/* edges: me -> author */}
-                {lay.graphIdxs.map((i) => (
+                {showAuthors && lay.graphIdxs.map((i) => (
                   <line
                     key={`e${i}`}
                     x1={lay.pos[lay.meIdx].x}
@@ -504,10 +552,11 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                   />
                 ))}
                 {/* edges: author -> every affiliation */}
-                {lay.graphIdxs.flatMap((i) =>
+                {showAuthors && showInsts && lay.graphIdxs.flatMap((i) =>
                   coauthors[i].institutions.map((inst) => {
                     if (!lay.instPos[inst]) return null;
                     const active = focus === i || hoverInst === inst || selInst === inst;
+                    if (!instMatch(inst)) return null;
                     return (
                       <line
                         key={`ei${i}-${inst}`}
@@ -524,7 +573,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                 )}
                 {/* edges: author -> paper */}
                 {Object.entries(lay.paperPos).map(([pid, pp]) =>
-                  paperVisible(pid) ? (
+                  paperVisible(pid) && paperMatch(pid) ? (
                     <line
                       key={`ep${pid}`}
                       x1={lay.pos[pp.anchor].x}
@@ -540,6 +589,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
 
                 {/* institution nodes */}
                 {Object.entries(lay.instPos).map(([name, p]) => {
+                  if (!showInsts || !instMatch(name)) return null;
                   const n = lay.instCount[name];
                   const r = 7 + 5 * Math.sqrt(n / Math.max(1, ...Object.values(lay.instCount)));
                   const active = hoverInst === name || selInst === name;
@@ -566,7 +616,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
 
                 {/* paper nodes */}
                 {Object.entries(lay.paperPos).map(([pid, pp]) => {
-                  if (!paperVisible(pid)) return null;
+                  if (!paperVisible(pid) || !paperMatch(pid)) return null;
                   const p = paperById.get(pid)!;
                   const active = hoverPaper === pid;
                   const off = hasFocus && !paperInFocus(pid);
@@ -591,7 +641,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                 })}
 
                 {/* author nodes */}
-                {lay.graphIdxs.map((i) => {
+                {showAuthors && lay.graphIdxs.map((i) => {
                   const c = coauthors[i];
                   const r = authorR(i);
                   const active = focus === i;
@@ -822,6 +872,149 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
             </span>
           </div>
 
+
+          {/* desktop: right info column for the clicked node */}
+          {!isMobile && hasFocus && (
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                right: 0,
+                width: 340,
+                height: '100vh',
+                background: '#fff',
+                borderLeft: '1px solid #e2e8f0',
+                boxShadow: '-8px 0 24px rgba(15,23,42,0.12)',
+                zIndex: 40,
+                padding: '22px 20px 40px',
+                overflowY: 'auto',
+                fontSize: 14,
+                color: '#0f172a',
+              }}
+            >
+              <button
+                onClick={resetAll}
+                aria-label="Close"
+                style={{
+                  position: 'absolute',
+                  top: 12,
+                  right: 14,
+                  border: '1px solid #e2e8f0',
+                  background: '#fff',
+                  borderRadius: 8,
+                  width: 30,
+                  height: 30,
+                  cursor: 'pointer',
+                  fontSize: 16,
+                  color: '#64748b',
+                }}
+              >
+                ×
+              </button>
+              {selected !== null && selected !== lay.meIdx && (
+                <>
+                  <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 2 }}>{coauthors[selected].name}</div>
+                  <div style={{ color: '#64748b', marginBottom: 8 }}>
+                    {coauthors[selected].institutions.join('; ') || '—'}
+                    {coauthors[selected].countries.length ? ` · ${coauthors[selected].countries.join('; ')}` : ''}
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
+                    <strong>{coauthors[selected].papers}</strong> shared paper{coauthors[selected].papers === 1 ? '' : 's'}
+                    {coauthors[selected].hindex > 0 && (
+                      <>
+                        {' · '}h-index <strong>{coauthors[selected].hindex}</strong>
+                      </>
+                    )}
+                  </div>
+                  {coauthors[selected].scholar && (
+                    <div style={{ marginBottom: 10 }}>
+                      <a href={coauthors[selected].scholar} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
+                        Google Scholar ↗
+                      </a>
+                    </div>
+                  )}
+                  <div style={{ fontWeight: 700, margin: '12px 0 6px' }}>Shared papers</div>
+                  {coauthors[selected].paperIds
+                    .map((pid) => paperById.get(pid)!)
+                    .filter(Boolean)
+                    .sort((a, b) => b.citations - a.citations)
+                    .map((p) => (
+                      <div key={p.id} style={{ marginBottom: 8, fontSize: 13 }}>
+                        {p.doi ? (
+                          <a href={p.doi} target="_blank" rel="noreferrer" style={{ color: '#1d4ed8' }}>
+                            {p.title}
+                          </a>
+                        ) : (
+                          p.title
+                        )}
+                        <div style={{ color: '#64748b', fontSize: 12 }}>
+                          {p.year}
+                          {p.venue ? ` · ${p.venue}` : ''} · {p.citations} citation{p.citations === 1 ? '' : 's'}
+                          {p.jcr ? ` · ${p.jcr}` : ''}
+                        </div>
+                      </div>
+                    ))}
+                </>
+              )}
+              {selInst !== null && (
+                <>
+                  <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{selInst}</div>
+                  <div style={{ marginBottom: 10 }}>
+                    <strong>{layBase.instCount[selInst]}</strong> co-author{layBase.instCount[selInst] === 1 ? '' : 's'} in the graph
+                  </div>
+                  <div style={{ fontWeight: 700, margin: '12px 0 6px' }}>Members</div>
+                  {(layBase.instMembers[selInst] || [])
+                    .slice()
+                    .sort((a, b) => coauthors[b].papers - coauthors[a].papers)
+                    .map((i) => (
+                      <div
+                        key={i}
+                        onClick={() => {
+                          setSelected(i);
+                          setSelInst(null);
+                        }}
+                        style={{ cursor: 'pointer', padding: '4px 0', fontSize: 13, color: '#1d4ed8' }}
+                      >
+                        {coauthors[i].name}
+                        <span style={{ color: '#64748b' }}>
+                          {' '}
+                          · {coauthors[i].papers} paper{coauthors[i].papers === 1 ? '' : 's'}
+                          {coauthors[i].hindex > 0 ? ` · h-index ${coauthors[i].hindex}` : ''}
+                        </span>
+                      </div>
+                    ))}
+                </>
+              )}
+              {selPaper !== null && paperById.get(selPaper) && (
+                <>
+                  <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>{paperById.get(selPaper)!.title}</div>
+                  <div style={{ color: '#64748b', marginBottom: 6 }}>
+                    {paperById.get(selPaper)!.year}
+                    {paperById.get(selPaper)!.venue ? ` · ${paperById.get(selPaper)!.venue}` : ''}
+                  </div>
+                  <div style={{ marginBottom: 8 }}>
+                    <strong>{paperById.get(selPaper)!.citations}</strong> citation{paperById.get(selPaper)!.citations === 1 ? '' : 's'}
+                    {paperById.get(selPaper)!.jcr && (
+                      <span style={{ background: '#eef2ff', color: '#4338ca', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700, marginLeft: 6 }}>
+                        {paperById.get(selPaper)!.jcr}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontWeight: 700, margin: '12px 0 6px' }}>Authors</div>
+                  <div style={{ color: '#475569', fontSize: 13, marginBottom: 10 }}>
+                    {(paperAuthors[selPaper] || []).map((i) => coauthors[i].name).join(', ') || '—'}
+                  </div>
+                  {paperById.get(selPaper)!.doi && (
+                    <a href={paperById.get(selPaper)!.doi} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
+                      Open the paper ↗
+                    </a>
+                  )}
+                </>
+              )}
+              <div style={{ marginTop: 18, fontSize: 12, color: '#94a3b8' }}>Click JC in the graph or × to bring everyone back.</div>
+            </div>
+          )}
+
           {/* world map (heatmap) */}
           <div style={{ marginTop: 26 }}>
             <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>Collaborations around the world</h3>
@@ -829,7 +1022,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
               Number of co-authors per country. Hover for details.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 10px', fontSize: 11, color: '#64748b' }}>
-              <span>fewer</span>
+              <span>1</span>
               <div
                 style={{
                   width: 150,
@@ -841,7 +1034,10 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                     .join(', ')})`,
                 }}
               />
-              <span>more co-authors</span>
+              <span>{maxCountryCount} co-authors</span>
+              <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: '#475569' }}>
+                {Object.keys(countries).length} countries
+              </span>
             </div>
             <div
               style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 10, background: '#f8fafc', overflow: 'visible' }}
@@ -889,7 +1085,12 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
 
           {/* full table */}
           <div style={{ marginTop: 26 }}>
-            <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>All co-authors</h3>
+            <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>
+              All co-authors{' '}
+              <span style={{ fontWeight: 500, fontSize: 13, color: '#64748b' }}>
+                {matcher ? `${matchCount} of ${coauthors.length} match the filter` : `${coauthors.length} total`}
+              </span>
+            </h3>
             <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 10 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
