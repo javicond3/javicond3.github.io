@@ -87,22 +87,40 @@ interface Layout {
   paperPos: Record<string, { x: number; y: number; r: number; anchor: number }>;
   paperExtra: Record<number, number>;
   maxPapers: number;
+  maxH: number;
 }
 
-function layout(data: CoauthorData): Layout {
+interface FocusSet {
+  authors: Set<number>;
+  insts: Set<string>;
+  papers: Set<string>;
+}
+
+function layout(data: CoauthorData, focus?: FocusSet | null): Layout {
   const { coauthors, papers, paperAuthors } = data;
   const meIdx = Math.max(0, coauthors.findIndex((c) => c.me));
-  const graphIdxs = coauthors.map((c, i) => i).filter((i) => coauthors[i].inGraph && !coauthors[i].me);
-  const maxPapers = Math.max(1, ...graphIdxs.map((i) => coauthors[i].papers));
+  const allIdxs = coauthors.map((c, i) => i).filter((i) => coauthors[i].inGraph && !coauthors[i].me);
+  const graphIdxs = focus ? allIdxs.filter((i) => focus.authors.has(i)) : allIdxs;
+  const maxPapers = Math.max(1, ...allIdxs.map((i) => coauthors[i].papers));
+  const maxH = Math.max(1, ...allIdxs.map((i) => coauthors[i].hindex), coauthors[meIdx].hindex);
   const cx = W / 2;
   const cy = H / 2;
 
-  const rings: number[][] = [[], [], []];
-  for (const i of graphIdxs) {
-    const p = coauthors[i].papers;
-    rings[p >= 7 ? 0 : p >= 3 ? 1 : 2].push(i);
+  const rings: number[][] = focus
+    ? graphIdxs.length > 10
+      ? [[], []]
+      : [[]]
+    : [[], [], []];
+  if (focus) {
+    const sorted = [...graphIdxs].sort((a, b) => coauthors[b].papers - coauthors[a].papers);
+    sorted.forEach((i, j) => rings[j % rings.length].push(i));
+  } else {
+    for (const i of graphIdxs) {
+      const p = coauthors[i].papers;
+      rings[p >= 7 ? 0 : p >= 3 ? 1 : 2].push(i);
+    }
   }
-  const radii = [105, 165, 225];
+  const radii = focus ? (rings.length > 1 ? [140, 215] : [150]) : [105, 165, 225];
   const pos: { x: number; y: number }[] = new Array(coauthors.length).fill({ x: -100, y: -100 });
   pos[meIdx] = { x: cx, y: cy };
   rings.forEach((ring, ri) => {
@@ -116,13 +134,15 @@ function layout(data: CoauthorData): Layout {
   // institutions (every affiliation counts) on an outer ring
   const instCount: Record<string, number> = {};
   const instMembers: Record<string, number[]> = {};
-  for (const i of graphIdxs) {
+  for (const i of allIdxs) {
     for (const inst of coauthors[i].institutions) {
       instCount[inst] = (instCount[inst] || 0) + 1;
       (instMembers[inst] ||= []).push(i);
     }
   }
-  const insts = Object.keys(instCount).sort((a, b) => instCount[b] - instCount[a]);
+  const insts = Object.keys(instCount)
+    .filter((name) => !focus || focus.insts.has(name))
+    .sort((a, b) => instCount[b] - instCount[a]);
   const instPos: Record<string, { x: number; y: number }> = {};
   const R = 272;
   insts.forEach((name, j) => {
@@ -136,7 +156,8 @@ function layout(data: CoauthorData): Layout {
   const paperExtra: Record<number, number> = {};
   const maxCit = Math.max(1, ...papers.map((p) => p.citations));
   for (const p of papers) {
-    const visible = (paperAuthors[p.id] || []).filter((i) => coauthors[i].inGraph && !coauthors[i].me);
+    if (focus && !focus.papers.has(p.id)) continue;
+    const visible = (paperAuthors[p.id] || []).filter((i) => graphIdxs.includes(i));
     const anchor = visible.length ? visible[0] : (paperAuthors[p.id] || []).includes(meIdx) ? meIdx : -1;
     if (anchor < 0) continue;
     (perAuthor[anchor] ||= []).push(p.id);
@@ -150,7 +171,7 @@ function layout(data: CoauthorData): Layout {
     shown.forEach((pid, k) => {
       const p = paperById.get(pid)!;
       const a = (k / shown.length) * Math.PI * 2 + (anchor % 7) * 0.5;
-      const rad = anchor === meIdx ? 46 + 14 * (k % 3) : 26 + 9 * (k % 3);
+      const rad = anchor === meIdx ? 46 + 14 * (k % 3) : focus ? 34 + 11 * (k % 3) : 26 + 9 * (k % 3);
       paperPos[pid] = {
         x: pos[anchor].x + rad * Math.cos(a),
         y: pos[anchor].y + rad * Math.sin(a),
@@ -160,7 +181,7 @@ function layout(data: CoauthorData): Layout {
     });
   }
 
-  return { pos, meIdx, graphIdxs, instPos, instCount, instMembers, paperPos, paperExtra, maxPapers };
+  return { pos, meIdx, graphIdxs, instPos, instCount, instMembers, paperPos, paperExtra, maxPapers, maxH };
 }
 
 /* ---------- component ---------- */
@@ -186,8 +207,37 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
-  const lay = useMemo(() => layout(data), [data]);
   const { coauthors, papers, paperAuthors, countries } = data;
+  const layBase = useMemo(() => layout(data), [data]);
+  const focusSets = useMemo<FocusSet | null>(() => {
+    const meIdx = layBase.meIdx;
+    if (selected !== null && selected !== meIdx) {
+      const a = coauthors[selected];
+      return {
+        authors: new Set([selected]),
+        insts: new Set(a.institutions.filter((n) => layBase.instCount[n])),
+        papers: new Set(Object.entries(paperAuthors).filter(([, arr]) => arr.includes(selected)).map(([pid]) => pid)),
+      };
+    }
+    if (selInst !== null) {
+      const members = layBase.instMembers[selInst] || [];
+      return {
+        authors: new Set(members),
+        insts: new Set(members.flatMap((i) => coauthors[i].institutions.filter((n) => layBase.instCount[n]))),
+        papers: new Set(Object.entries(paperAuthors).filter(([, arr]) => arr.some((a) => members.includes(a))).map(([pid]) => pid)),
+      };
+    }
+    if (selPaper !== null) {
+      const authors = (paperAuthors[selPaper] || []).filter((i) => coauthors[i].inGraph && !coauthors[i].me);
+      return {
+        authors: new Set(authors),
+        insts: new Set(authors.flatMap((i) => coauthors[i].institutions.filter((n) => layBase.instCount[n]))),
+        papers: new Set([selPaper]),
+      };
+    }
+    return null;
+  }, [selected, selInst, selPaper, coauthors, paperAuthors, layBase]);
+  const lay = useMemo(() => (focusSets ? layout(data, focusSets) : layBase), [focusSets, layBase, data]);
   const paperById = useMemo(() => new Map(papers.map((p) => [p.id, p])), [papers]);
 
   useEffect(() => {
@@ -203,33 +253,16 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
   const matchCount = matcher ? coauthors.filter(matcher).length : 0;
 
   const paperVisible = (pid: string) =>
-    showPapers ||
-    selected === lay.meIdx ||
-    (selected !== null && (paperAuthors[pid] || []).includes(selected)) ||
-    (selInst !== null && (paperAuthors[pid] || []).some((a) => (lay.instMembers[selInst] || []).includes(a)));
-  const authorR = (i: number) => 11 + 8 * Math.sqrt(coauthors[i].papers / lay.maxPapers);
+    focusSets !== null
+      ? focusSets.papers.has(pid)
+      : showPapers || selected === lay.meIdx;
+  const authorR = (i: number) => 11 + 8 * Math.sqrt(coauthors[i].hindex / lay.maxH);
 
-  /* focus: with a selection, everything not connected greys out */
-  const hasFocus = selected !== null || selInst !== null;
-  const authorInFocus = (i: number) => {
-    if (!hasFocus) return true;
-    if (selected === lay.meIdx) return true; // clicking JC lights the whole graph
-    if (i === lay.meIdx) return true;
-    if (selected !== null) return i === selected;
-    return coauthors[i].institutions.includes(selInst!);
-  };
-  const instInFocus = (name: string) => {
-    if (!hasFocus) return true;
-    if (selected === lay.meIdx) return true;
-    if (selInst !== null) return name === selInst;
-    return coauthors[selected!].institutions.includes(name);
-  };
-  const paperInFocus = (pid: string) => {
-    if (!hasFocus) return true;
-    if (selected === lay.meIdx) return true;
-    if (selected !== null) return (paperAuthors[pid] || []).includes(selected);
-    return (paperAuthors[pid] || []).some((a) => (lay.instMembers[selInst!] || []).includes(a));
-  };
+  /* focus: with a selection, everything else disappears and the graph re-layouts */
+  const hasFocus = focusSets !== null;
+  const authorInFocus = (i: number) => !focusSets || focusSets.authors.has(i);
+  const instInFocus = (name: string) => !focusSets || focusSets.insts.has(name);
+  const paperInFocus = (pid: string) => !focusSets || focusSets.papers.has(pid);
   const dim = (i: number) => (matcher && !matcher(coauthors[i]) ? 0.12 : 1);
 
   const focus = selected !== null ? selected : hovered;
@@ -590,12 +623,11 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                   onMouseEnter={() => setHovered(lay.meIdx)}
                   onMouseLeave={() => setHovered(null)}
                   onClick={() => {
-                    setSelected(selected === lay.meIdx ? null : lay.meIdx);
+                    setSelected(null);
                     setSelInst(null);
                     setSelPaper(null);
                   }}
                 >
-                  {selected === lay.meIdx && <circle cx={lay.pos[lay.meIdx].x} cy={lay.pos[lay.meIdx].y} r={31} fill="none" stroke={COL_ME} strokeWidth={2.5} />}
                   <circle cx={lay.pos[lay.meIdx].x} cy={lay.pos[lay.meIdx].y} r={26} fill={COL_ME} stroke="#fff" strokeWidth={3} />
                   <text x={lay.pos[lay.meIdx].x} y={lay.pos[lay.meIdx].y + 5} textAnchor="middle" fontSize={13} fontWeight={800} fill="#fff">
                     {coauthors[lay.meIdx]?.initials || 'JC'}
@@ -630,7 +662,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                     </div>
                     {popupPaper.doi && (
                       <div style={{ marginTop: 4, fontSize: 12 }}>
-                        <a href={popupPaper.doi} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
+                        <a href={popupPaper.doi} target="_blank" rel="noreferrer" style={{ color: '#2563eb', pointerEvents: 'auto' }}>
                           Open the paper ↗
                         </a>
                       </div>
@@ -669,7 +701,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                     </div>
                     {popupAuthor.scholar && (
                       <div style={{ fontSize: 12 }}>
-                        <a href={popupAuthor.scholar} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
+                        <a href={popupAuthor.scholar} target="_blank" rel="noreferrer" style={{ color: '#2563eb', pointerEvents: 'auto' }}>
                           Google Scholar ↗
                         </a>
                       </div>
@@ -681,7 +713,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
 
             {/* popup: paper */}
             {popupPaper && view && !isMobile && (
-              <div data-popup style={{ ...popupStyle(view), pointerEvents: 'auto' }}>
+              <div data-popup style={{ ...popupStyle(view), pointerEvents: 'none' }}>
                 <div style={{ fontWeight: 700, marginBottom: 4 }}>{popupPaper.title}</div>
                 <div style={{ color: '#64748b', marginBottom: 4 }}>
                   {popupPaper.year}
@@ -702,7 +734,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                 </div>
                 {popupPaper.doi && (
                   <div style={{ marginTop: 4, fontSize: 12 }}>
-                    <a href={popupPaper.doi} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
+                    <a href={popupPaper.doi} target="_blank" rel="noreferrer" style={{ color: '#2563eb', pointerEvents: 'auto' }}>
                       Open the paper ↗
                     </a>
                   </div>
@@ -734,7 +766,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
 
             {/* popup: author */}
             {popupAuthor && !popupPaper && !popupInst && view && !isMobile && (
-              <div data-popup style={{ ...popupStyle(view), pointerEvents: 'auto' }}>
+              <div data-popup style={{ ...popupStyle(view), pointerEvents: 'none' }}>
                 <div style={{ fontWeight: 700, marginBottom: 2 }}>{popupAuthor.name}</div>
                 <div style={{ color: '#64748b', marginBottom: 4 }}>
                   {popupAuthor.institutions.join('; ') || '—'}
@@ -763,11 +795,11 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                 )}
                 {!popupAuthor.me && (
                   <div style={{ marginTop: 6, fontSize: 12, color: '#64748b' }}>
-                    Click to {selected === focus ? 'release' : 'focus'} and show their papers
+                    Click to {selected === focus ? 'release the focus' : 'isolate their network'}
                     {popupAuthor.scholar && (
                       <>
                         {' · '}
-                        <a href={popupAuthor.scholar} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
+                        <a href={popupAuthor.scholar} target="_blank" rel="noreferrer" style={{ color: '#2563eb', pointerEvents: 'auto' }}>
                           Scholar ↗
                         </a>
                       </>
@@ -784,15 +816,33 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
             <span><i style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 5, background: COL_AUTHOR, marginRight: 5 }} />Co-author (initials)</span>
             <span><i style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 5, background: COL_INST, marginRight: 5 }} />Institution</span>
             <span><i style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 5, background: COL_PAPER, marginRight: 5 }} />Paper (year, citations below)</span>
-            <span style={{ color: '#94a3b8' }}>Click a node to focus its network · drag to pan · +/− to zoom</span>
+            <span style={{ color: '#94a3b8' }}>
+              Node size = h-index · edge width = shared publications · click a node to isolate its network · click JC to bring
+              everyone back · drag to pan · +/− to zoom
+            </span>
           </div>
 
           {/* world map (heatmap) */}
           <div style={{ marginTop: 26 }}>
             <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>Collaborations around the world</h3>
             <p style={{ margin: '0 0 8px', fontSize: 13, color: '#64748b' }}>
-              Number of co-authors per country: the redder, the more collaborations; the bluer, the fewer. Hover for details.
+              Number of co-authors per country. Hover for details.
             </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 10px', fontSize: 11, color: '#64748b' }}>
+              <span>fewer</span>
+              <div
+                style={{
+                  width: 150,
+                  height: 8,
+                  borderRadius: 4,
+                  border: '1px solid #d7deea',
+                  background: `linear-gradient(90deg, ${[0, 0.25, 0.5, 0.75, 1]
+                    .map((f) => heatColor(Math.max(1, Math.round(Math.exp(f * Math.log(maxCountryCount)))), maxCountryCount, false))
+                    .join(', ')})`,
+                }}
+              />
+              <span>more co-authors</span>
+            </div>
             <div
               style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 10, background: '#f8fafc', overflow: 'visible' }}
               onMouseLeave={() => {
