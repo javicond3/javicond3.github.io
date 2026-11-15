@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { isAuthenticated } from '@/utils/auth';
 import type { CoauthorData, Coauthor } from '@/data/coauthors';
+import { instSigla } from '@/data/siglas';
 import { WORLD_PATHS, NAME2ISO, MAP_LABELS } from '@/data/worldmap';
 
 /* ---------- colours ---------- */
@@ -30,6 +31,8 @@ function heatColor(count: number, maxCount: number, active: boolean): string {
 /* ---------- helpers ---------- */
 const shortInst = (name: string): string => {
   if (name.length <= 16) return name;
+  const sig = instSigla(name);
+  if (sig !== name.slice(0, 12) && sig.length <= 14) return sig;
   const small = new Set(['de', 'of', 'the', 'la', 'el', 'los', 'las', 'and', 'y', 'for', 'in', 'del', 'di']);
   const words = name.replace(/[(),]/g, '').split(/\s+/).filter((w) => w && !small.has(w.toLowerCase()));
   const acro = words.map((w) => w.charAt(0).toUpperCase()).join('');
@@ -201,27 +204,31 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
 
   const paperVisible = (pid: string) =>
     showPapers ||
-    (selected !== null && lay.paperPos[pid]?.anchor === selected) ||
-    (selInst !== null && (lay.instMembers[selInst] || []).includes(lay.paperPos[pid]?.anchor));
+    selected === lay.meIdx ||
+    (selected !== null && (paperAuthors[pid] || []).includes(selected)) ||
+    (selInst !== null && (paperAuthors[pid] || []).some((a) => (lay.instMembers[selInst] || []).includes(a)));
   const authorR = (i: number) => 11 + 8 * Math.sqrt(coauthors[i].papers / lay.maxPapers);
 
   /* focus: with a selection, everything not connected greys out */
   const hasFocus = selected !== null || selInst !== null;
   const authorInFocus = (i: number) => {
     if (!hasFocus) return true;
+    if (selected === lay.meIdx) return true; // clicking JC lights the whole graph
     if (i === lay.meIdx) return true;
     if (selected !== null) return i === selected;
     return coauthors[i].institutions.includes(selInst!);
   };
   const instInFocus = (name: string) => {
     if (!hasFocus) return true;
+    if (selected === lay.meIdx) return true;
     if (selInst !== null) return name === selInst;
     return coauthors[selected!].institutions.includes(name);
   };
   const paperInFocus = (pid: string) => {
     if (!hasFocus) return true;
-    if (selected !== null) return lay.paperPos[pid]?.anchor === selected;
-    return (lay.instMembers[selInst!] || []).includes(lay.paperPos[pid]?.anchor);
+    if (selected === lay.meIdx) return true;
+    if (selected !== null) return (paperAuthors[pid] || []).includes(selected);
+    return (paperAuthors[pid] || []).some((a) => (lay.instMembers[selInst!] || []).includes(a));
   };
   const dim = (i: number) => (matcher && !matcher(coauthors[i]) ? 0.12 : 1);
 
@@ -293,6 +300,12 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
       <div style={{ color: '#64748b', marginBottom: 6 }}>
         max h-index {info.maxH} · avg {info.avgH}
       </div>
+      {info.institutions.length > 0 && (
+        <div style={{ marginBottom: 6 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Institutions</div>
+          <div style={{ fontSize: 12 }}>{info.institutions.join(' · ')}</div>
+        </div>
+      )}
       {info.topCited.length > 0 && (
         <div style={{ marginBottom: 4 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Top cited papers</div>
@@ -572,7 +585,17 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                 })}
 
                 {/* me */}
-                <g>
+                <g
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setHovered(lay.meIdx)}
+                  onMouseLeave={() => setHovered(null)}
+                  onClick={() => {
+                    setSelected(selected === lay.meIdx ? null : lay.meIdx);
+                    setSelInst(null);
+                    setSelPaper(null);
+                  }}
+                >
+                  {selected === lay.meIdx && <circle cx={lay.pos[lay.meIdx].x} cy={lay.pos[lay.meIdx].y} r={31} fill="none" stroke={COL_ME} strokeWidth={2.5} />}
                   <circle cx={lay.pos[lay.meIdx].x} cy={lay.pos[lay.meIdx].y} r={26} fill={COL_ME} stroke="#fff" strokeWidth={3} />
                   <text x={lay.pos[lay.meIdx].x} y={lay.pos[lay.meIdx].y + 5} textAnchor="middle" fontSize={13} fontWeight={800} fill="#fff">
                     {coauthors[lay.meIdx]?.initials || 'JC'}

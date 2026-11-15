@@ -1,5 +1,7 @@
 import * as xlsx from 'xlsx';
 import path from 'path';
+import { instSigla, instsForCountry } from './siglas';
+export { instSigla, instsForCountry } from './siglas';
 import fs from 'fs';
 
 export interface Coauthor {
@@ -36,6 +38,7 @@ export interface CountryAgg {
   avgH: number;
   topH: { name: string; scholar: string; hindex: number }[];
   topPapers: { name: string; scholar: string; papers: number }[];
+  institutions: string[]; // acronyms of the institutions he collaborates with in this country
   papers: number;      // shared papers with co-authors in this country
   citations: number;   // total citations across those papers
   topCited: { title: string; citations: number; doi: string }[];
@@ -80,6 +83,7 @@ const parseList = (raw: any): string[] =>
         .map((s) => s.trim())
         .filter(Boolean)
     : [];
+
 
 export function getCoauthorData(): CoauthorData {
   const empty: CoauthorData = { coauthors: [], papers: [], paperAuthors: {}, countries: {} };
@@ -157,7 +161,7 @@ export function getCoauthorData(): CoauthorData {
     for (const c of coauthors) {
       if (c.me) continue;
       for (const country of c.countries) {
-        const a = (countries[country] ||= { name: country, count: 0, maxH: 0, avgH: 0, topH: [], topPapers: [], papers: 0, citations: 0, topCited: [] });
+        const a = (countries[country] ||= { name: country, count: 0, maxH: 0, avgH: 0, topH: [], topPapers: [], institutions: [], papers: 0, citations: 0, topCited: [] });
         a.count += 1;
         a.maxH = Math.max(a.maxH, c.hindex);
       }
@@ -174,6 +178,7 @@ export function getCoauthorData(): CoauthorData {
         .slice(0, 3)
         .map((c) => ({ name: c.name, scholar: c.scholar, papers: c.papers }));
       const pmap = new Map(papers.map((p) => [p.id, p]));
+      a.institutions = [...new Set(members.flatMap((c) => instsForCountry(c.institutions, c.countries, name).map(instSigla)))].sort();
       const pids = [...new Set(members.flatMap((c) => c.paperIds))];
       a.papers = pids.length;
       a.citations = pids.reduce((sum, id) => sum + (pmap.get(id)?.citations || 0), 0);
