@@ -33,8 +33,9 @@ export default function LoginModal({ onClose }: LoginModalProps) {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // No native form submission: the site is also embedded in sandboxed
+  // preview iframes where form submit events are blocked.
+  const handleSubmit = () => {
     setLoading(true);
     setError("");
     const ok = login(password);
@@ -73,7 +74,7 @@ export default function LoginModal({ onClose }: LoginModalProps) {
         >
           Private screen
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           <div>
             <input
               ref={inputRef}
@@ -93,6 +94,9 @@ export default function LoginModal({ onClose }: LoginModalProps) {
               }}
               placeholder="Enter password"
               autoComplete="current-password"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && password && !loading) handleSubmit();
+              }}
             />
           </div>
 
@@ -101,14 +105,15 @@ export default function LoginModal({ onClose }: LoginModalProps) {
           )}
 
           <button
-            type="submit"
+            type="button"
+            onClick={() => { if (password && !loading) handleSubmit(); }}
             disabled={loading || !password}
             className="w-full py-2 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-50"
             style={{ backgroundColor: "#2ecfba", color: "#1c2d2d" }}
           >
             {loading ? "Logging in…" : "Login"}
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );
