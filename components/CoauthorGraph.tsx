@@ -296,8 +296,8 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
       {info.topCited.length > 0 && (
         <div style={{ marginBottom: 4 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Top cited papers</div>
-          {info.topCited.map((p) => (
-            <div key={p.title} style={{ fontSize: 12 }}>
+          {info.topCited.map((p, pi) => (
+            <div key={p.doi || pi} style={{ fontSize: 12 }}>
               {p.doi ? (
                 <a href={p.doi} target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>
                   {p.title.length > 55 ? p.title.slice(0, 55) + '…' : p.title}
