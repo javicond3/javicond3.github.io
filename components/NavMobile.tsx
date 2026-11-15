@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { isAuthenticated } from "@/utils/auth";
 import { navigateToHash } from "@/utils/navScroll";
 import NavAuthButton from "@/components/NavAuthButton";
 
@@ -53,10 +55,16 @@ const sections = [
 ];
 
 export default function NavMobile() {
+  const router = useRouter();
+  const [authed, setAuthed] = useState(false);
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const close = () => { setOpen(false); setExpanded(null); };
+
+  useEffect(() => {
+    setAuthed(isAuthenticated());
+  }, []);
 
   const handleNav = (href: string) => {
     close();
@@ -131,6 +139,17 @@ export default function NavMobile() {
               )}
             </div>
           ))}
+          {authed && (
+            <div style={{ borderBottom: "1px solid #2ecfba22" }}>
+              <a
+                href="/network"
+                onClick={(e) => { e.preventDefault(); close(); router.push("/network"); }}
+                className="block px-5 py-3 text-gray-300 hover:text-white font-medium"
+              >
+                Network
+              </a>
+            </div>
+          )}
            <NavAuthButton isIcon={false} />
         </div>
       )}
