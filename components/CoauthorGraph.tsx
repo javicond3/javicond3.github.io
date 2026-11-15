@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { isAuthenticated } from '@/utils/auth';
 import type { CoauthorData, Coauthor } from '@/data/coauthors';
 import { instSigla } from '@/data/siglas';
-import { WORLD_PATHS, NAME2ISO, MAP_LABELS } from '@/data/worldmap';
+import { WORLD_PATHS, NAME2ISO } from '@/data/worldmap';
 
 /* ---------- colours ---------- */
 const COL_ME = '#e03131';
@@ -794,7 +794,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
               Number of co-authors per country: the redder, the more collaborations; the bluer, the fewer. Hover for details.
             </p>
             <div
-              style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 10, background: '#f8fafc', overflow: 'hidden' }}
+              style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 10, background: '#f8fafc', overflow: 'visible' }}
               onMouseLeave={() => {
                 setHoverCountry(null);
                 setMapView(null);
@@ -823,30 +823,18 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
                     />
                   );
                 })}
-                {Object.entries(countryByIso2).map(([iso2, info]) => {
-                  const at = MAP_LABELS[iso2];
-                  if (!at) return null;
-                  return (
-                    <g key={`lbl-${iso2}`} pointerEvents="none">
-                      <circle cx={at.x} cy={at.y} r={10} fill="rgba(255,255,255,0.82)" stroke="rgba(30,41,59,0.35)" strokeWidth={0.6} />
-                      <text x={at.x} y={at.y + 3.5} textAnchor="middle" fontSize={10} fontWeight={800} fill="#1e293b">
-                        {info.count}
-                      </text>
-                    </g>
-                  );
-                })}
               </svg>
               {!isMobile && hoverCountry && countryByIso2[hoverCountry] && mapView && (
                 <div data-popup style={{ ...popupStyle(mapView), pointerEvents: 'auto', minWidth: 210 }}>
                   {countryPopupBody(countryByIso2[hoverCountry])}
                 </div>
               )}
-              {isMobile && selCountry && countryByIso2[selCountry] && (
-                <div style={{ borderTop: '1px solid #e2e8f0', padding: '12px 14px', fontSize: 13, background: '#fff' }}>
-                  {countryPopupBody(countryByIso2[selCountry])}
-                </div>
-              )}
             </div>
+            {isMobile && selCountry && countryByIso2[selCountry] && (
+              <div style={{ marginTop: 8, border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 14px', fontSize: 13, background: '#fff' }}>
+                {countryPopupBody(countryByIso2[selCountry])}
+              </div>
+            )}
           </div>
 
           {/* full table */}
