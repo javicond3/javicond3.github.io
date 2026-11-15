@@ -465,7 +465,7 @@ export default function CoauthorGraph({ data }: { data: CoauthorData }) {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder='Search: name, "inst:oxford", "h>10", "papers>3", "country:spain"'
+              placeholder='Search: name, inst:oxford, h>10, papers>3, country:spain, -country:usa, upm OR kth''
               style={{
                 flex: 1,
                 minWidth: 280,
