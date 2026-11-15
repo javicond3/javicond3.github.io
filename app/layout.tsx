@@ -8,6 +8,7 @@ import NavTeaching from "@/components/NavTeaching";
 import NavInternational from "@/components/NavInternational";
 import NavMobile from "@/components/NavMobile";
 import NavAuthButton from "@/components/NavAuthButton";
+import NavNetwork from "@/components/NavNetwork";
 import SearchBar from "@/components/SearchBar";
 import { SearchProvider } from "@/components/SearchContext";
 import { getAllYears } from "@/utils/getAllYears";
@@ -45,6 +46,7 @@ export default function RootLayout({
                 <NavProjects />
                 <NavTeaching />
                 <NavInternational />
+                <NavNetwork />
                 <SearchBar />
                 <NavAuthButton isIcon={true} />
               </nav>
