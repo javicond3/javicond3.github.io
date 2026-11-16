@@ -1,4 +1,5 @@
 import { normalizeSearchText } from "./normalizeSearch";
+import { tagSearchText } from "./tags";
 
 interface AboutEntryLike {
   title: string;
@@ -14,6 +15,7 @@ export function entrySearchText(entry: AboutEntryLike): string {
 interface PublicationLike {
   title: string;
   authors: string;
+  authorNames?: string;
   journal: string;
   year: number;
   location?: string;
@@ -21,11 +23,12 @@ interface PublicationLike {
   doi?: string;
   jcr?: string;
   keywords?: string[];
+  topics?: string[];
 }
 
 export function pubSearchText(p: PublicationLike): string {
   return normalizeSearchText(
-    [p.title, p.authors, p.journal, p.year, p.location, p.type, p.doi, p.jcr, p.keywords?.join(" ")]
+    [p.title, p.authors, p.authorNames, p.journal, p.year, p.location, p.type, p.doi, p.jcr, tagSearchText(p.topics, p.keywords)]
       .filter(Boolean)
       .join(" ")
   );
@@ -35,10 +38,12 @@ interface ProjectLike {
   title: string;
   funder: string;
   scope: string;
+  topics?: string[];
+  keywords?: string[];
 }
 
 export function projectSearchText(p: ProjectLike): string {
-  return normalizeSearchText([p.title, p.funder, p.scope].filter(Boolean).join(" "));
+  return normalizeSearchText([p.title, p.funder, p.scope, tagSearchText(p.topics, p.keywords)].filter(Boolean).join(" "));
 }
 
 interface SoftwareLike {

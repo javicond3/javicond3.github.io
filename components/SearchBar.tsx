@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { normalizeSearchText } from "@/utils/normalizeSearch";
+import { compileTextQuery, SEARCH_PLACEHOLDER } from "@/utils/searchQuery";
 import { yearRangeMatchesSelection } from "@/utils/yearOverlap";
 import { papersFilterMatch } from "@/utils/papersFilter";
 import { projectsFilterMatch } from "@/utils/projectsFilter";
@@ -20,9 +20,9 @@ export default function SearchBar() {
     const root = document.getElementById("main-content");
     if (!root) return;
 
-    const normalized = normalizeSearchText(query);
+    const textFn = compileTextQuery(query);
     const isActive =
-      normalized !== "" || selectedYears.length > 0 || papersFilters.length > 0 || projectsFilters.length > 0 || ipOnly;
+      textFn !== null || selectedYears.length > 0 || papersFilters.length > 0 || projectsFilters.length > 0 || ipOnly;
 
     if (isActive && !wasActiveRef.current) {
       window.dispatchEvent(new Event("app-search-start"));
@@ -32,11 +32,21 @@ export default function SearchBar() {
     const items = root.querySelectorAll<HTMLElement>("[data-search]");
     items.forEach((el) => {
       const text = el.getAttribute("data-search") || "";
-      const textMatch = normalized === "" || text.includes(normalized);
-
-      let yearMatch = true;
       const yearStartAttr = el.getAttribute("data-year-start");
       const yearEndAttr = el.getAttribute("data-year-end");
+      const textMatch =
+        !textFn ||
+        textFn(text, {
+          pub: el.hasAttribute("data-pub-type"),
+          project: el.hasAttribute("data-project-tipo"),
+          type: el.getAttribute("data-pub-type"),
+          jcr: el.getAttribute("data-pub-jcr"),
+          sjr: el.getAttribute("data-pub-sjr"),
+          yearStart: yearStartAttr != null ? Number(yearStartAttr) : null,
+          yearEnd: yearEndAttr != null ? Number(yearEndAttr) : null,
+        });
+
+      let yearMatch = true;
       if (selectedYears.length > 0 && yearStartAttr != null && yearEndAttr != null) {
         yearMatch = yearRangeMatchesSelection(Number(yearStartAttr), Number(yearEndAttr), selectedYears);
       }
@@ -44,7 +54,7 @@ export default function SearchBar() {
       let papersMatch = true;
       const pubType = el.getAttribute("data-pub-type");
       if (papersFilters.length > 0 && pubType != null) {
-        papersMatch = papersFilterMatch(pubType, el.getAttribute("data-pub-jcr") || "", papersFilters);
+        papersMatch = papersFilterMatch(pubType, el.getAttribute("data-pub-jcr") || "", papersFilters, el.getAttribute("data-pub-sjr") || "");
       }
 
       let projectsMatch = true;
@@ -145,6 +155,10 @@ export default function SearchBar() {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    // the filter is already applied while typing: Enter just closes the box to show the results
+                    if (e.key === "Enter") close();
+                  }}
                   placeholder="Search everything…"
                   className="w-full pl-9 pr-9 py-3 rounded-lg border border-gray-200 text-base text-gray-800 bg-white focus:outline-none focus:ring-2 transition-shadow"
                   style={{ boxShadow: query ? "0 0 0 2px #2ecfba" : undefined }}
@@ -160,6 +174,7 @@ export default function SearchBar() {
                   </svg>
                 </button>
               </div>
+              <p className="text-[11px] text-gray-400 px-1 leading-snug">{SEARCH_PLACEHOLDER} · Enter to apply</p>
             </div>
           </div>
         </div>

@@ -28,6 +28,8 @@ import EventCard from "./EventCard";
 import { SelectableProps } from "./EntryBullet";
 import { extractYearRange, dateYearRange, yearDataAttrs, YearRange } from "@/utils/extractYearRange";
 import { normalizeSearchText } from "@/utils/normalizeSearch";
+import { compileTextQuery } from "@/utils/searchQuery";
+import { countTags } from "@/utils/tags";
 import { useSearch } from "./SearchContext";
 import {
   entrySearchText,
@@ -83,9 +85,13 @@ function groupInfo<T>(
   selectedYears: number[],
   extraMatchFn?: (item: T) => boolean
 ): GroupInfo {
+  const textFn = compileTextQuery(normalizedQuery);
   const keys = items
     .map((item, idx) => {
-      const textMatch = normalizedQuery === "" || searchTextFn(item).includes(normalizedQuery);
+      const pub = item as { type?: string; jcr?: string; sjr?: string; authors?: string; tipo?: string };
+      const yr = yearRangeFn ? yearRangeFn(item) : null;
+      const textMatch =
+        !textFn || textFn(searchTextFn(item), { pub: typeof pub.authors === "string", project: pub.tipo === "Competitive" || pub.tipo === "Private", type: pub.type, jcr: pub.jcr, sjr: pub.sjr, yearStart: yr?.start, yearEnd: yr?.end });
       let yearMatch = true;
       if (selectedYears.length > 0) {
         const range = yearRangeFn ? yearRangeFn(item) : null;
@@ -399,7 +405,7 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
   const educationInfo = gi(cvData.education, "education", entrySearchText, (e) => extractYearRange(e.year));
   const certificateInfo = gi(cvData.certificates, "certificate", entrySearchText, (e) => extractYearRange(e.year));
 
-  const papersMatchFn = (p: { type: string; jcr?: string }) => papersFilterMatch(p.type, p.jcr ?? "", papersFilters);
+  const papersMatchFn = (p: { type: string; jcr?: string; sjr?: string }) => papersFilterMatch(p.type, p.jcr ?? "", papersFilters, p.sjr ?? "");
   const journalInfo = gi(cvData.journals, "journal", pubSearchText, (p) => extractYearRange(p.year), papersMatchFn);
   const conferenceInfo = gi(cvData.conferences, "conference", pubSearchText, (p) => extractYearRange(p.year), papersMatchFn);
   const bookInfo = gi(cvData.books, "book", pubSearchText, (p) => extractYearRange(p.year), papersMatchFn);
@@ -429,7 +435,7 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
   const reviewerSearchTextValue = normalizeSearchText(
     ["reviewer", ...cvData.reviewerData.journals, ...cvData.reviewerData.books, ...cvData.reviewerData.conferences].join(" ")
   );
-  const reviewerVisible = hasReviewer && (normalizedQuery === "" || reviewerSearchTextValue.includes(normalizedQuery));
+  const reviewerVisible = hasReviewer && (compileTextQuery(normalizedQuery)?.(reviewerSearchTextValue) ?? true);
   const reviewerKeys = reviewerVisible ? ["reviewer"] : [];
 
   // H1-level aggregates (for the top select-all checkbox of each group)
@@ -446,7 +452,8 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
   const teachingGroup = combineGroups(selected, courseInfo, tprojectInfo, supervisionGroup, extcourseInfo);
   const internationalGroup = combineGroups(selected, visitInfo, awardInfo, wgIntlInfo, lectureInfo, eventInfo);
 
-  const badges = ["Artificial Intelligence", "Educational Technology", "Digital Twins", "Linked Open Data", "Edge Computing"];
+  // the topics that tag papers and projects (sheet columns "areas" / "topic"), most used first
+  const badges = countTags([...cvData.journals, ...cvData.conferences, ...cvData.books, ...cvData.otherPubs, ...cvData.competitive, ...cvData.private].map((x) => x.topics)).map((t) => t.name);
 
   const summaryGroups = buildSummaryGroups({
     competitiveProjects: cvData.competitive,
@@ -702,7 +709,7 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
               searchText={pubSearchText}
               yearRange={(p) => extractYearRange(p.year)}
               sortDescBy={(p) => p.year}
-              extraAttrs={(p) => ({ "data-pub-type": p.type, "data-pub-jcr": p.jcr ?? "" })}
+              extraAttrs={(p) => ({ "data-pub-type": p.type, "data-pub-jcr": p.jcr ?? "", "data-pub-sjr": p.sjr ?? "" })}
                       renderCard={(p, sel) => <PublicationCard publication={p} selectable={sel} />} />
                   )}
                 </section>
@@ -724,7 +731,7 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
               searchText={pubSearchText}
               yearRange={(p) => extractYearRange(p.year)}
               sortDescBy={(p) => p.year}
-              extraAttrs={(p) => ({ "data-pub-type": p.type, "data-pub-jcr": p.jcr ?? "" })}
+              extraAttrs={(p) => ({ "data-pub-type": p.type, "data-pub-jcr": p.jcr ?? "", "data-pub-sjr": p.sjr ?? "" })}
                       renderCard={(p, sel) => <PublicationCard publication={p} selectable={sel} />} />
                   )}
                 </section>
@@ -746,7 +753,7 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
               searchText={pubSearchText}
               yearRange={(p) => extractYearRange(p.year)}
               sortDescBy={(p) => p.year}
-              extraAttrs={(p) => ({ "data-pub-type": p.type, "data-pub-jcr": p.jcr ?? "" })}
+              extraAttrs={(p) => ({ "data-pub-type": p.type, "data-pub-jcr": p.jcr ?? "", "data-pub-sjr": p.sjr ?? "" })}
                       renderCard={(p, sel) => <PublicationCard publication={p} selectable={sel} />} />
                   )}
                 </section>
@@ -768,7 +775,7 @@ export default function CVBuilder({ cvData }: CVBuilderProps) {
               searchText={pubSearchText}
               yearRange={(p) => extractYearRange(p.year)}
               sortDescBy={(p) => p.year}
-              extraAttrs={(p) => ({ "data-pub-type": p.type, "data-pub-jcr": p.jcr ?? "" })}
+              extraAttrs={(p) => ({ "data-pub-type": p.type, "data-pub-jcr": p.jcr ?? "", "data-pub-sjr": p.sjr ?? "" })}
                       renderCard={(p, sel) => <PublicationCard publication={p} selectable={sel} />} />
                   )}
                 </section>

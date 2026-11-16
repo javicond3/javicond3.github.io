@@ -1,3 +1,5 @@
+import HashScroll from "@/components/HashScroll";
+import CopyTray from "@/components/CopyTray";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -58,6 +60,8 @@ export default function RootLayout({
             </div>
           </header>
 
+          <HashScroll />
+          <CopyTray />
           {children}
 
           <Footer />

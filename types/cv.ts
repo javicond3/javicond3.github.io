@@ -3,6 +3,7 @@ import type { DashboardData } from "@/utils/buildDashboardData";
 export interface Publication {
   id: string;
   authors: string;
+  authorNames?: string;
   highlightAuthor: string;
   year: number;
   title: string;
@@ -12,8 +13,10 @@ export interface Publication {
   status?: string;
   doi?: string;
   jcr?: string;
+  sjr?: string;
   abstract: string;
   keywords: string[];
+  topics?: string[];
 }
 
 export interface Project {
@@ -27,6 +30,8 @@ export interface Project {
   money?: number;
   isIP: boolean;
   link?: string;
+  topics?: string[];
+  keywords?: string[];
 }
 
 export interface SoftwareProject {

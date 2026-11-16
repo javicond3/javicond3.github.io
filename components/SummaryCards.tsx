@@ -5,7 +5,10 @@ import { useSearch } from "./SearchContext";
 import { yearRangeMatchesSelection } from "@/utils/yearOverlap";
 import { papersFilterMatch } from "@/utils/papersFilter";
 import { projectsFilterMatch } from "@/utils/projectsFilter";
-import { normalizeSearchText } from "@/utils/normalizeSearch";
+import { compileTextQuery, compileTagQuery } from "@/utils/searchQuery";
+import { isAuthenticated } from "@/utils/auth";
+
+const euros = (n: number) => `€${Math.round(n).toLocaleString("es-ES")}`;
 
 export interface SearchableItem {
   search: string;
@@ -15,6 +18,8 @@ export interface SearchableItem {
   subcategory?: string;
   flag?: boolean;
   value?: number;
+  // SJR quartile of a paper (only read by the shared papers filter)
+  sjr?: string;
   // Overrides the auto-generated 2-digit year label in the "by year" chart,
   // e.g. "21-22" for an academic year instead of just "21".
   yearLabel?: string;
@@ -44,6 +49,14 @@ export interface StatSource {
   // Same idea for the shared Projects Filter/Call-type/"I'm PI only" selection (item.category is
   // Competitive/Private, item.subcategory is the call scope, item.flag is isIP).
   applyProjectsFilter?: boolean;
+  // Pill only rendered for a logged-in visitor.
+  authOnly?: boolean;
+  // The pill shows the sum of item.value as an amount in euros instead of a count.
+  money?: boolean;
+  // Only items with flag set (e.g. projects where I am PI) are counted.
+  flagOnly?: boolean;
+  // Items carry no search text: the free-text query does not filter them (years / filters still do).
+  ignoreQuery?: boolean;
 }
 
 export interface SummaryGroups {
@@ -60,8 +73,12 @@ interface BreakdownNode {
   children?: BreakdownNode[];
 }
 
-function matchesFilter(item: SearchableItem, normalized: string, selectedYears: number[]): boolean {
-  const textMatch = normalized === "" || item.search.includes(normalized);
+type TextFn = ReturnType<typeof compileTextQuery>;
+
+function matchesFilter(item: SearchableItem, textFn: TextFn, selectedYears: number[], pub: boolean, project: boolean): boolean {
+  const textMatch =
+    !textFn ||
+    textFn(item.search, { pub, project, type: item.category, jcr: item.subcategory, sjr: item.sjr, yearStart: item.yearStart, yearEnd: item.yearEnd });
   let yearMatch = true;
   if (selectedYears.length > 0 && item.yearStart != null && item.yearEnd != null) {
     yearMatch = yearRangeMatchesSelection(item.yearStart, item.yearEnd, selectedYears);
@@ -69,9 +86,9 @@ function matchesFilter(item: SearchableItem, normalized: string, selectedYears: 
   return textMatch && yearMatch;
 }
 
-function filterItems(items: SearchableItem[], normalized: string, selectedYears: number[]): SearchableItem[] {
-  if (normalized === "" && selectedYears.length === 0) return items;
-  return items.filter((item) => matchesFilter(item, normalized, selectedYears));
+function filterItems(items: SearchableItem[], textFn: TextFn, selectedYears: number[], pub = false, project = false): SearchableItem[] {
+  if (!textFn && selectedYears.length === 0) return items;
+  return items.filter((item) => matchesFilter(item, textFn, selectedYears, pub, project));
 }
 
 function groupBy(items: SearchableItem[], key: "category" | "subcategory"): { label: string; items: SearchableItem[] }[] {
@@ -228,19 +245,20 @@ function distinctCount(items: SearchableItem[]): number {
   return new Set(items.map((i) => i.groupKey)).size;
 }
 
-function computeBreakdown(items: SearchableItem[], hasFlag: boolean, sortChildren: boolean, sumValue?: boolean, valueSuffix?: string): BreakdownNode[] {
+function computeBreakdown(items: SearchableItem[], hasFlag: boolean, sortChildren: boolean, sumValue?: boolean, valueSuffix?: string, money?: boolean): BreakdownNode[] {
+  const parenOf = (its: SearchableItem[]) => (money ? euros(sumOf(its)) : sumValue ? `${sumOf(its)}${valueSuffix ?? ""}` : undefined);
   return groupBy(items, "category").map(({ label, items: catItems }) => {
     let children = groupBy(catItems, "subcategory").map(({ label: subLabel, items: subItems }) => ({
       label: subLabel,
       count: distinctCount(subItems),
-      paren: sumValue ? `${sumOf(subItems)}${valueSuffix ?? ""}` : undefined,
+      paren: parenOf(subItems),
       flagCount: hasFlag ? subItems.filter((i) => i.flag).length : undefined,
     }));
     if (sortChildren) children = [...children].sort((a, b) => a.label.localeCompare(b.label));
     return {
       label,
       count: distinctCount(catItems),
-      paren: sumValue ? `${sumOf(catItems)}${valueSuffix ?? ""}` : undefined,
+      paren: parenOf(catItems),
       flagCount: hasFlag ? catItems.filter((i) => i.flag).length : undefined,
       children: children.length > 0 ? children : undefined,
     };
@@ -263,6 +281,8 @@ function BreakdownPill({ node, textColor, borderColor, tint, small }: { node: Br
 interface SummaryPillProps {
   label: string;
   count: number;
+  // Replaces the count at the start of the pill (e.g. an amount of money)
+  display?: string;
   paren?: string;
   breakdown: BreakdownNode[];
   yearSeries: YearSeries;
@@ -275,7 +295,7 @@ interface SummaryPillProps {
   hideChart?: boolean;
 }
 
-function SummaryPill({ label, count, paren, breakdown, yearSeries, valueUnit, flagLabel, flagCount, textColor, borderColor, tint, hideChart }: SummaryPillProps) {
+function SummaryPill({ label, count, display, paren, breakdown, yearSeries, valueUnit, flagLabel, flagCount, textColor, borderColor, tint, hideChart }: SummaryPillProps) {
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -305,7 +325,7 @@ function SummaryPill({ label, count, paren, breakdown, yearSeries, valueUnit, fl
         className={`px-3 py-1 rounded-full text-xs font-semibold border select-none ${hasDetails ? "cursor-pointer" : ""}`}
         style={{ backgroundColor: tint, color: textColor, borderColor }}
       >
-        {count} {label}
+        {display ?? count} {label}
         {paren ? ` (${paren})` : ""}
         {flagLabel != null && flagCount != null && flagCount > 0 ? ` (${flagCount} ${flagLabel})` : ""}
       </span>
@@ -316,7 +336,7 @@ function SummaryPill({ label, count, paren, breakdown, yearSeries, valueUnit, fl
         >
 
           <p className="text-xs font-bold text-gray-700 mb-2 whitespace-nowrap">
-            {label} ({count}{paren ? `, ${paren}` : ""})
+            {label} ({display ?? count}{paren ? `, ${paren}` : ""})
           </p>
           {breakdown.length > 0 && (
             <div className="space-y-2 mb-3">
@@ -345,14 +365,20 @@ function SummaryGroupRow({
   textColor, borderColor, tint, sources,
 }: { textColor: string; borderColor: string; tint: string; sources: StatSource[] }) {
   const { query, selectedYears, papersFilters, projectsFilters, ipOnly } = useSearch();
-  const normalized = normalizeSearchText(query);
+  const textFn = compileTextQuery(query);
+  const tagFn = compileTagQuery(query); // funding pills carry no titles: only topic / keyword filters reach them
+  const [authed, setAuthed] = useState(false);
+  useEffect(() => setAuthed(isAuthenticated()), []);
 
   return (
     <div className="flex flex-wrap gap-2">
       {sources.map((source) => {
-        let visible = filterItems(source.items, normalized, selectedYears);
+        if (source.authOnly && !authed) return null;
+        if (source.money && source.items.length === 0) return null;
+        let visible = filterItems(source.items, source.ignoreQuery ? tagFn : textFn, selectedYears, !!source.applyPapersFilter, !!source.applyProjectsFilter);
+        if (source.flagOnly) visible = visible.filter((i) => i.flag);
         if (source.applyPapersFilter && papersFilters.length > 0) {
-          visible = visible.filter((i) => papersFilterMatch(i.category ?? "", i.subcategory ?? "", papersFilters));
+          visible = visible.filter((i) => papersFilterMatch(i.category ?? "", i.subcategory ?? "", papersFilters, i.sjr ?? ""));
         }
         if (source.applyProjectsFilter) {
           if (ipOnly) visible = visible.filter((i) => i.flag);
@@ -361,7 +387,7 @@ function SummaryGroupRow({
           }
         }
         const hasFlag = source.flagLabel != null;
-        const breakdown = computeBreakdown(visible, hasFlag, source.sortChildren ?? false, source.sumValue, source.valueSuffix);
+        const breakdown = computeBreakdown(visible, hasFlag, source.sortChildren ?? false, source.sumValue, source.valueSuffix, source.money);
         const stackKey: "category" | "flag" | null = visible.some((i) => i.category) ? "category" : hasFlag ? "flag" : null;
         const chartItems = source.chartCategories
           ? visible.filter((i) => i.category != null && source.chartCategories!.includes(i.category))
@@ -373,6 +399,7 @@ function SummaryGroupRow({
             key={source.label}
             label={source.label}
             count={distinctCount(visible)}
+            display={source.money ? euros(sumOf(visible)) : undefined}
             paren={source.sumValue ? `${sumOf(visible)}${source.valueSuffix ?? ""}` : undefined}
             breakdown={breakdown}
             yearSeries={yearSeries}

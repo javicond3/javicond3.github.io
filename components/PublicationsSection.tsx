@@ -1,3 +1,4 @@
+import SubToggle from "./SubToggle";
 import { publications, conferencePublications, bookPublications, otherPublications, getReviewerData, Publication } from "@/data/publications";
 import PublicationCard from "./PublicationCard";
 import { normalizeSearchText } from "@/utils/normalizeSearch";
@@ -30,6 +31,7 @@ function PublicationGroup({ pubs }: { pubs: Publication[] }) {
                 data-search={pubSearchText(pub)}
                 data-pub-type={pub.type}
                 data-pub-jcr={pub.jcr ?? ""}
+                data-pub-sjr={pub.sjr ?? ""}
                 {...yearDataAttrs({ start: pub.year, end: pub.year })}
               >
                 <hr className="my-4 border-gray-200" />
@@ -48,25 +50,25 @@ export default function PublicationsSection() {
   return (
     <>
       <section id="journal-publications" className="scroll-mt-20" data-search-group>
-        <h2 className="text-2xl font-bold mb-3" style={{ color: '#2ecfba' }}>Journal Publications <span className="search-count text-gray-400 font-semibold text-sm align-middle" data-total={publications.length}>({publications.length})</span></h2>
+        <h2 className="text-2xl font-bold mb-3" style={{ color: '#2ecfba' }}><SubToggle />Journal Publications <span className="search-count text-gray-400 font-semibold text-sm align-middle" data-total={publications.length}>({publications.length})</span></h2>
         <PublicationGroup pubs={publications} />
       </section>
 
       <section id="conference-publications" className="scroll-mt-20 mt-8" data-search-group>
-        <h2 className="text-2xl font-bold mb-3" style={{ color: '#2ecfba' }}>Conference Papers <span className="search-count text-gray-400 font-semibold text-sm align-middle" data-total={conferencePublications.length}>({conferencePublications.length})</span></h2>
+        <h2 className="text-2xl font-bold mb-3" style={{ color: '#2ecfba' }}><SubToggle />Conference Papers <span className="search-count text-gray-400 font-semibold text-sm align-middle" data-total={conferencePublications.length}>({conferencePublications.length})</span></h2>
         <PublicationGroup pubs={conferencePublications} />
       </section>
 
       {bookPublications.length > 0 && (
         <section id="books" className="scroll-mt-20 mt-8" data-search-group>
-          <h2 className="text-2xl font-bold mb-3" style={{ color: '#2ecfba' }}>Books <span className="search-count text-gray-400 font-semibold text-sm align-middle" data-total={bookPublications.length}>({bookPublications.length})</span></h2>
+          <h2 className="text-2xl font-bold mb-3" style={{ color: '#2ecfba' }}><SubToggle />Books <span className="search-count text-gray-400 font-semibold text-sm align-middle" data-total={bookPublications.length}>({bookPublications.length})</span></h2>
           <PublicationGroup pubs={bookPublications} />
         </section>
       )}
 
       {otherPublications.length > 0 && (
         <section id="other-publications" className="scroll-mt-20 mt-8" data-search-group>
-          <h2 className="text-2xl font-bold mb-3" style={{ color: '#2ecfba' }}>Other Publications <span className="search-count text-gray-400 font-semibold text-sm align-middle" data-total={otherPublications.length}>({otherPublications.length})</span></h2>
+          <h2 className="text-2xl font-bold mb-3" style={{ color: '#2ecfba' }}><SubToggle />Other Publications <span className="search-count text-gray-400 font-semibold text-sm align-middle" data-total={otherPublications.length}>({otherPublications.length})</span></h2>
           <PublicationGroup pubs={otherPublications} />
         </section>
       )}
@@ -77,7 +79,7 @@ export default function PublicationsSection() {
           className="scroll-mt-20 mt-8"
           data-search={normalizeSearchText(["reviewer", ...reviewerJournals, ...reviewerBooks, ...reviewerConferences].join(" "))}
         >
-          <h2 className="text-2xl font-bold mb-3" style={{ color: '#2ecfba' }}>Reviewer</h2>
+          <h2 className="text-2xl font-bold mb-3" style={{ color: '#2ecfba' }}><SubToggle />Reviewer</h2>
           <p className="text-[0.95rem] leading-relaxed text-gray-800">
             {`Reviewer in ${reviewerJournals.length} journals such as `}
             {reviewerJournals.map((j, i) => (

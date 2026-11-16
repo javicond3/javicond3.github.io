@@ -1,3 +1,4 @@
+import { normalizeSearchText } from "./normalizeSearch";
 import type { SearchableItem, SummaryGroups } from "@/components/SummaryCards";
 import { extractYearRange, dateYearRange, YearRange } from "@/utils/extractYearRange";
 import {
@@ -19,14 +20,14 @@ export function toSearchable<T>(
   items: T[],
   searchText: (item: T) => string,
   yearRange?: (item: T) => YearRange | null,
-  extra?: (item: T) => { category?: string; subcategory?: string; flag?: boolean; value?: number }
+  extra?: (item: T) => { category?: string; subcategory?: string; flag?: boolean; value?: number; sjr?: string }
 ): SearchableItem[] {
   return items.map((item) => {
     const range = yearRange ? yearRange(item) : null;
-    const { category, subcategory, flag, value } = extra
+    const { category, subcategory, flag, value, sjr } = extra
       ? extra(item)
-      : { category: undefined, subcategory: undefined, flag: undefined, value: undefined };
-    return { search: searchText(item), yearStart: range?.start, yearEnd: range?.end, category, subcategory, flag, value };
+      : { category: undefined, subcategory: undefined, flag: undefined, value: undefined, sjr: undefined };
+    return { search: searchText(item), yearStart: range?.start, yearEnd: range?.end, category, subcategory, flag, value, sjr };
   });
 }
 
@@ -69,6 +70,7 @@ interface PublicationInput {
   type?: string;
   doi?: string;
   jcr?: string;
+  sjr?: string;
   keywords?: string[];
 }
 
@@ -152,7 +154,18 @@ interface WorkingGroupInput {
   year?: string;
 }
 
+export interface FundingInput {
+  tipo: "Competitive" | "Private";
+  scope: string;
+  isIP: boolean;
+  startDate: Date | null;
+  money: number;
+  tags?: string;
+}
+
 export interface SummaryGroupsInput {
+  // Amount per project (no titles): feeds the two funding pills shown only when logged in
+  projectsFunding?: FundingInput[];
   competitiveProjects: ProjectInput[];
   privateProjects: ProjectInput[];
   journals: PublicationInput[];
@@ -192,6 +205,21 @@ export function buildSummaryGroups(data: SummaryGroupsInput): SummaryGroups {
           })
         ),
       },
+      ...(["Funding", "Funding (IP)"] as const).map((label) => ({
+        label,
+        authOnly: true,
+        money: true,
+        flagOnly: label === "Funding (IP)",
+        ignoreQuery: true,
+        hideChart: true,
+        applyProjectsFilter: true,
+        items: (data.projectsFunding ?? [])
+          .filter((p) => p.money > 0)
+          .map((p) => {
+            const year = p.startDate ? new Date(p.startDate).getFullYear() : undefined;
+            return { search: normalizeSearchText(p.tags || ""), yearStart: year, yearEnd: year, category: p.tipo, subcategory: p.scope || undefined, flag: p.isIP, value: p.money };
+          }),
+      })),
       {
         label: "Publications",
         sortChildren: true,
@@ -201,7 +229,7 @@ export function buildSummaryGroups(data: SummaryGroupsInput): SummaryGroups {
           [...data.journals, ...data.conferences, ...data.books, ...data.otherPubs],
           pubSearchText,
           (p) => ({ start: p.year, end: p.year }),
-          (p) => ({ category: p.type || "Other", subcategory: p.jcr || undefined })
+          (p) => ({ category: p.type || "Other", subcategory: p.jcr || undefined, sjr: p.sjr || undefined })
         ),
       },
       { label: "Sexenios", items: toSearchable(data.sexenios, entrySearchText, (e) => extractYearRange(e.year)) },

@@ -1,4 +1,7 @@
 import type { Publication } from "@/data/publications";
+import { pubSearchText } from "@/utils/searchText";
+import { countTags } from "@/utils/tags";
+import { normalizeSearchText } from "@/utils/normalizeSearch";
 import type { Project, ProjectFunding } from "@/data/projects";
 import type { Thesis } from "@/data/tutor";
 
@@ -149,8 +152,22 @@ export interface PublicationRaw {
   year: number;
   type: "Journal" | "Conference" | "Book" | "Other";
   jcr: string;
+  sjr: string;
   publisher: string;
   journal: string;
+  citations: number;
+  search: string; // normalized text the site-wide search runs on
+}
+
+// Largest h such that at least h publications have >= h citations each.
+export function computeHIndex(citationCounts: number[]): number {
+  const sorted = [...citationCounts].sort((a, b) => b - a);
+  let h = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    if (sorted[i] >= i + 1) h = i + 1;
+    else break;
+  }
+  return h;
 }
 
 export interface ProjectRaw {
@@ -159,10 +176,13 @@ export interface ProjectRaw {
   scope: string;
   isIP: boolean;
   money: number;
+  tags: string; // normalized "[topic:..] [kw:..]" of the project, for the topic / keyword filters
 }
 
 export interface DashboardData {
   years: number[];
+  topics: string[]; // topics of papers and projects, most used first
+  keywords: string[]; // keywords of papers and projects, most used first
 
   publicationsRaw: PublicationRaw[];
   projectsRaw: ProjectRaw[];
@@ -171,6 +191,9 @@ export interface DashboardData {
   publicationsChart: AxisChart;
   publicationsBreakdown: BreakdownRow[];
   publicationsLegend: { label: string; color: string }[];
+
+  totalCitations: number;
+  hIndex: number;
 
   jcrTotal: number;
   jcrChart: AxisChart;
@@ -203,6 +226,7 @@ export interface DashboardData {
 }
 
 export const TYPE_COLORS = { Journal: "#2ecfba", Conference: "#1c2d2d", Book: "#eda100", Other: "#9ca3af" };
+export const SJR_COLORS: Record<string, string> = { Q1: "#2a78d6", Q2: "#eb6834", Q3: "#1baf7a", Q4: "#eda100", "No SJR": "#c3c2b7" };
 export const JCR_COLORS: Record<string, string> = { Q1: "#2a78d6", Q2: "#eb6834", Q3: "#1baf7a", Q4: "#eda100", "No JCR": "#c3c2b7" };
 export const CORE_COLORS: Record<string, string> = {
   "CORE A*": "#2a78d6",
@@ -317,9 +341,15 @@ export function buildDashboardData(params: {
     year: p.year,
     type: pubTypeOf(p),
     jcr: p.jcr ?? "",
+    sjr: p.sjr ?? "",
     publisher: pubTypeOf(p) === "Journal" ? journalPublisherLabelOf.get(normalizedPublisherOf(p).toLowerCase()) ?? normalizedPublisherOf(p) : "",
     journal: p.journal ?? "",
+    citations: p.citations ?? 0,
+    search: pubSearchText(p),
   }));
+
+  const totalCitations = allPubs.reduce((s, p) => s + (p.citations ?? 0), 0);
+  const hIndex = computeHIndex(allPubs.map((p) => p.citations ?? 0));
 
   const projects = [
     ...competitiveProjects.map((p) => ({ ...p, __year: p.startDate?.getFullYear() })),
@@ -387,7 +417,7 @@ export function buildDashboardData(params: {
   const totalFunding = fundedProjects.reduce((s, p) => s + p.money, 0);
 
   const projectsRaw: ProjectRaw[] = projectsFunding
-    .map((p) => ({ year: p.startDate?.getFullYear(), tipo: p.tipo, scope: p.scope, isIP: p.isIP, money: p.money }))
+    .map((p) => ({ year: p.startDate?.getFullYear(), tipo: p.tipo, scope: p.scope, isIP: p.isIP, money: p.money, tags: normalizeSearchText(p.tags || "") }))
     .filter((p): p is ProjectRaw => p.year != null);
 
   const fundingCallTypeCategories: Category<ProjectFunding>[] = [
@@ -401,6 +431,8 @@ export function buildDashboardData(params: {
 
   return {
     years,
+    topics: countTags([...allPubs, ...competitiveProjects, ...privateProjects].map((x) => x.topics)).map((t) => t.name),
+    keywords: countTags([...allPubs, ...competitiveProjects, ...privateProjects].map((x) => x.keywords)).map((t) => t.name),
 
     publicationsRaw,
     projectsRaw,
@@ -409,6 +441,9 @@ export function buildDashboardData(params: {
     publicationsChart: computeAxisChart(allPubs, (p) => p.year, () => 1, pubCategories, years, 90),
     publicationsBreakdown: breakdown(allPubs, pubCategories),
     publicationsLegend: pubCategories.map((c) => ({ label: c.label, color: c.color })),
+
+    totalCitations,
+    hIndex,
 
     jcrTotal: journals.length,
     jcrChart: computeAxisChart(journals, (p) => p.year, () => 1, jcrCategories, years, 90),

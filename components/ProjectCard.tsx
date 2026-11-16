@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FaChevronDown } from "react-icons/fa";
 import EntryBullet, { SelectableProps } from "./EntryBullet";
 import CopyButton from "./CopyButton";
+import TagChips from "./TagChips";
 
 interface ProjectLike {
   title: string;
@@ -16,6 +17,8 @@ interface ProjectLike {
   isIP: boolean;
   link?: string;
   convocatoria?: string;
+  topics?: string[];
+  keywords?: string[];
 }
 
 function formatMonthYear(date: Date | string | null): string {
@@ -112,6 +115,7 @@ export default function ProjectCard({ project, selectable }: { project: ProjectL
             </button>
           )}
         </p>
+        <TagChips topics={project.topics} keywords={project.keywords} className="mt-1.5" />
 
         {open && project.convocatoria && (
           <div className="mt-2 space-y-1">

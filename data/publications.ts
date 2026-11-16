@@ -1,10 +1,13 @@
 import * as xlsx from 'xlsx';
 import path from 'path';
 import fs from 'fs';
+import { authorNamesForTitle } from './coauthors';
+import { parseTagList } from '../utils/tags';
 
 export interface Publication {
   id: string;
   authors: string; // raw author string; bold name is applied via highlighting key author
+  authorNames?: string; // full names of the authors (Coautores sheet), only used by the search
   highlightAuthor: string; // substring to bold
   year: number;
   title: string;
@@ -14,9 +17,11 @@ export interface Publication {
   status?: string; // e.g. "in-press"
   doi?: string;
   jcr?: string; // e.g. "Q1", "Q2"
+  sjr?: string; // SJR quartile ("Q1".."Q4"), only used by the dashboard chart
   publisher?: string;
   abstract: string;
-  keywords: string[];
+  keywords: string[]; // from the "keywords" column
+  topics?: string[]; // from the "areas" column
   openAccess?: string[]; // links from the "Open Access" column (arXiv, TechRxiv, mirrors, ...)
   upmRepo?: string; // link from "En el repo de UPM" (Archivo Digital UPM)
   dataRepos?: string[]; // links from "Datos/Repos" (code, datasets: GitHub, Zenodo, ...)
@@ -60,6 +65,7 @@ const parseRows = (data: any[], tipo: string, prefix: string): Publication[] => 
     return {
       id: `${prefix}${index}`,
       authors: row['Autores'] ? String(row['Autores']) : '',
+      authorNames: authorNamesForTitle(row['Publicación'] ? String(row['Publicación']) : ''),
       highlightAuthor: 'J. Conde',
       year,
       title: row['Publicación'] ? String(row['Publicación']) : '',
@@ -69,9 +75,11 @@ const parseRows = (data: any[], tipo: string, prefix: string): Publication[] => 
       status,
       doi: (row['Link'] && row['Link'] !== "-") ? String(row['Link']) : '',
       jcr: (row['JCR'] && row['JCR'] !== "-") ? String(row['JCR']) : '',
+      sjr: (row['SJR'] && row['SJR'] !== "-") ? String(row['SJR']).trim() : '',
       publisher: (row['Editorial'] && row['Editorial'] !== "-") ? String(row['Editorial']) : undefined,
       abstract: row['Sumary'] ? String(row['Sumary']) : '',
-      keywords: row['Keywords'] ? String(row['Keywords']).split(',').map((k: string) => k.trim()) : [],
+      keywords: parseTagList(row['keywords'] ?? row['Keywords']),
+      topics: parseTagList(row['areas'] ?? row['topic'] ?? row['topics']),
       openAccess: parseList(row['Open Access']),
       upmRepo: (row['En el repo de UPM'] && row['En el repo de UPM'] !== "-") ? parseList(row['En el repo de UPM'])[0] ?? String(row['En el repo de UPM']).trim() : undefined,
       dataRepos: parseList(row['Datos/Repos']),
@@ -110,6 +118,7 @@ export const getOtherPublications = (): Publication[] => {
       return {
         id: `other${index}`,
         authors: row['Autores'] ? String(row['Autores']) : '',
+      authorNames: authorNamesForTitle(row['Publicación'] ? String(row['Publicación']) : ''),
         highlightAuthor: 'J. Conde',
         year,
         title: row['Publicación'] ? String(row['Publicación']) : '',
@@ -120,7 +129,8 @@ export const getOtherPublications = (): Publication[] => {
         doi: (row['Link'] && row['Link'] !== "-") ? String(row['Link']) : '',
         jcr: (row['JCR'] && row['JCR'] !== "-") ? String(row['JCR']) : '',
         abstract: row['Sumary'] ? String(row['Sumary']) : '',
-        keywords: row['Keywords'] ? String(row['Keywords']).split(',').map((k: string) => k.trim()) : [],
+        keywords: parseTagList(row['keywords'] ?? row['Keywords']),
+      topics: parseTagList(row['areas'] ?? row['topic'] ?? row['topics']),
         openAccess: parseList(row['Open Access']),
         upmRepo: (row['En el repo de UPM'] && row['En el repo de UPM'] !== "-") ? parseList(row['En el repo de UPM'])[0] ?? String(row['En el repo de UPM']).trim() : undefined,
         dataRepos: parseList(row['Datos/Repos']),

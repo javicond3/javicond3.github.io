@@ -1,6 +1,7 @@
 import * as xlsx from 'xlsx';
 import path from 'path';
 import fs from 'fs';
+import { parseTagList, tagSearchText } from '../utils/tags';
 
 export interface Project {
   id: string;
@@ -14,6 +15,8 @@ export interface Project {
   isIP: boolean;
   link?: string;
   convocatoria?: string;
+  topics: string[]; // "topic" column
+  keywords: string[]; // "keywords" column
 }
 
 const MONTHS_EN = [
@@ -72,6 +75,8 @@ const loadProjects = (): Project[] => {
       isIP,
       link: row['Link'] ? String(row['Link']) : undefined,
       convocatoria,
+      topics: parseTagList(row['topic'] ?? row['topics'] ?? row['areas']),
+      keywords: parseTagList(row['keywords']),
     };
   });
 };
@@ -146,6 +151,7 @@ export interface ProjectFunding {
   isIP: boolean;
   startDate: Date | null;
   money: number;
+  tags: string; // topics and keywords only (no title), so the topic filters reach the charts
 }
 
 // Internal-use figures only (e.g. aggregate dashboard charts) — private contract
@@ -169,6 +175,7 @@ export const getProjectsFunding = (): ProjectFunding[] => {
       const money = rawMoney != null && !isNaN(Number(rawMoney)) ? Number(rawMoney) : 0;
       const scope = row['Alcance'] ? String(row['Alcance']) : '';
       const isIP = typeof row['IP-YO'] === 'string' && row['IP-YO'].trim().toLowerCase() === 'yes';
-      return { tipo, scope, isIP, startDate, money };
+      const tags = tagSearchText(parseTagList(row['topic'] ?? row['topics'] ?? row['areas']), parseTagList(row['keywords']));
+      return { tipo, scope, isIP, startDate, money, tags };
     });
 };

@@ -46,3 +46,18 @@
 [data-search]:not(.search-hidden) ~ [data-search]:not(.search-hidden) > hr {
   display: block;
 }
+
+/* Item opened through a "Ref" link: clear of the sticky nav bar and briefly highlighted */
+[id^="ref-"] {
+  scroll-margin-top: 80px;
+}
+.ref-target {
+  background-color: #f0fdfa;
+  box-shadow: -6px 0 0 #f0fdfa, 6px 0 0 #f0fdfa, inset 3px 0 0 #2ecfba;
+  border-radius: 4px;
+}
+
+/* Subsection collapsed with its +/- button (components/SubToggle.tsx): only the heading stays */
+.sub-collapsed > :not(h2):not(h3) {
+  display: none;
+}

@@ -10,18 +10,22 @@ import {
   PublicationRaw,
   ProjectRaw,
   computeAxisChart,
+  computeHIndex,
   breakdown as computeBreakdown,
   moneyBreakdown as computeMoneyBreakdown,
   topPublisherCategoriesOf,
   TYPE_COLORS,
   JCR_COLORS,
+  SJR_COLORS,
   CORE_COLORS,
   PROJECT_COLORS,
   CALL_TYPE_COLORS,
   CALL_TYPE_PALETTE,
 } from "@/utils/buildDashboardData";
 import { useSearch } from "./SearchContext";
-import { JCR_QUARTILES, CORE_LIST, papersFilterMatch } from "@/utils/papersFilter";
+import { compileTextQuery, compileTagQuery, SEARCH_PLACEHOLDER } from "@/utils/searchQuery";
+import { normalizeSearchText } from "@/utils/normalizeSearch";
+import { JCR_QUARTILES, SJR_FILTERS, CORE_LIST, papersFilterMatch } from "@/utils/papersFilter";
 import { projectsFilterMatch } from "@/utils/projectsFilter";
 
 // Keeps every chart's horizontal scroll container in sync: scrolling one (by any
@@ -141,6 +145,12 @@ function pubTypeCategories(): Category<PublicationRaw>[] {
     { label: "Other", color: TYPE_COLORS.Other, match: (p) => p.type === "Other" },
   ];
 }
+function pubSjrCategories(): Category<PublicationRaw>[] {
+  return [
+    ...JCR_QUARTILES.map((q) => ({ label: q, color: SJR_COLORS[q], match: (p: PublicationRaw) => p.sjr === q })),
+    { label: "No SJR", color: SJR_COLORS["No SJR"], match: (p) => !JCR_QUARTILES.includes(p.sjr) },
+  ];
+}
 function pubJcrCategories(): Category<PublicationRaw>[] {
   return [
     ...JCR_QUARTILES.map((q) => ({ label: q, color: JCR_COLORS[q], match: (p: PublicationRaw) => p.jcr === q })),
@@ -180,13 +190,19 @@ function PapersFilterBar({ filters, onToggle, onClear }: { filters: string[]; on
           <FilterChip key={f} label={f} active={filters.includes(f)} onClick={() => onToggle(f)} />
         ))}
         <span className="ml-auto text-[11px] text-gray-400 font-medium">
-          {filters.length > 0 ? filters.join(" or ") : "All papers"}
+          {filters.length > 0 ? filters.map((f) => f.replace(/^SJR-/, "SJR ").replace(/^JCR-/, "JCR ").replace(/^CORE-/, "CORE ")).join(" or ") : "All papers"}
         </span>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-[11px] font-bold text-gray-400 mr-0.5" style={{ width: 46 }}>JCR:</span>
         {[...JCR_QUARTILES, "JCR-Other"].map((f) => (
           <FilterChip key={f} label={f === "JCR-Other" ? "Other" : f} active={filters.includes(f)} onClick={() => onToggle(f)} />
+        ))}
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[11px] font-bold text-gray-400 mr-0.5" style={{ width: 46 }}>SJR:</span>
+        {[...SJR_FILTERS, "SJR-Other"].map((f) => (
+          <FilterChip key={f} label={f.slice(4)} active={filters.includes(f)} onClick={() => onToggle(f)} />
         ))}
       </div>
       <div className="flex items-center gap-2 flex-wrap">
@@ -233,6 +249,8 @@ function ProjectsFilterBar({
   ipOnly: boolean;
   onToggleIp: () => void;
 }) {
+  // call-type chips are stored normalized (as typed in the search box)
+  const has = (f: string) => filters.some((x) => normalizeSearchText(x) === normalizeSearchText(f));
   return (
     <div className="mb-5 pb-4 border-b border-gray-100">
       <label className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-600 mb-2 cursor-pointer w-fit">
@@ -244,7 +262,7 @@ function ProjectsFilterBar({
           <span className="text-[11px] font-bold text-gray-400 mr-0.5" style={{ width: 46 }}>Filter:</span>
           <FilterChip label="All projects" active={filters.length === 0} onClick={onClear} />
           {["Competitive", "Private"].map((f) => (
-            <FilterChip key={f} label={f} active={filters.includes(f)} onClick={() => onToggle(f)} />
+            <FilterChip key={f} label={f} active={has(f)} onClick={() => onToggle(f)} />
           ))}
           <span className="ml-auto text-[11px] text-gray-400 font-medium">
             {filters.length > 0 ? filters.join(" or ") : "All projects"}
@@ -253,7 +271,7 @@ function ProjectsFilterBar({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[11px] font-bold text-gray-400 mr-0.5" style={{ width: 46 }}>Call type:</span>
           {scopes.map((f) => (
-            <FilterChip key={f} label={f} active={filters.includes(f)} onClick={() => onToggle(f)} />
+            <FilterChip key={f} label={f} active={has(f)} onClick={() => onToggle(f)} />
           ))}
         </div>
       </div>
@@ -490,6 +508,8 @@ export default function Dashboard({ data }: { data: DashboardData }) {
     selectedYears,
     toggleYear,
     clearYears,
+    query,
+    setQuery,
     papersFilters,
     togglePapersFilter,
     clearPapersFilters,
@@ -498,6 +518,12 @@ export default function Dashboard({ data }: { data: DashboardData }) {
     clearProjectsFilters,
     ipOnly,
     toggleIpOnly,
+    topicFilters,
+    toggleTopic,
+    clearTopics,
+    keywordFilters,
+    toggleKeyword,
+    clearKeywords,
   } = useSearch();
   const [hoveredYear, setHoveredYear] = useState<number | null>(null);
   const activeYears = hoveredYear != null ? [hoveredYear] : selectedYears;
@@ -514,6 +540,25 @@ export default function Dashboard({ data }: { data: DashboardData }) {
   return (
     <ScrollSyncContext.Provider value={scrollSync}>
     <section id="dashboard" className="scroll-mt-20 space-y-4">
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-2">
+        <span className="text-xs font-bold text-gray-500 mr-1 whitespace-nowrap">Search:</span>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={SEARCH_PLACEHOLDER}
+          aria-label="Search everything"
+          className="flex-1 min-w-0 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#2ecfba]"
+        />
+        {query && (
+          <button
+            onClick={() => setQuery("")}
+            className="px-3 py-1 rounded-full text-xs font-semibold border border-gray-200 text-gray-500 hover:text-gray-700 whitespace-nowrap"
+          >
+            Clear
+          </button>
+        )}
+      </div>
       <div className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-2 flex-wrap">
         <span className="text-xs font-bold text-gray-500 mr-1">Filter by year:</span>
         <button
@@ -542,19 +587,65 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           </button>
         ))}
       </div>
+      {data.topics.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold text-gray-500 mr-1">Filter by topic:</span>
+          {[null, ...data.topics].map((t) => {
+            const on = t === null ? topicFilters.length === 0 : topicFilters.includes(normalizeSearchText(t));
+            return (
+              <button
+                key={t ?? "all"}
+                onClick={() => (t === null ? clearTopics() : toggleTopic(t))}
+                className="px-3 py-1 rounded-full text-xs font-semibold border transition-colors"
+                style={on ? { backgroundColor: "#2ecfba", color: "#fff", borderColor: "#2ecfba" } : { backgroundColor: "#fff", color: "#5b6663", borderColor: "#e7eae8" }}
+              >
+                {t ?? "All topics"}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {data.keywords.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs font-bold text-gray-500 mr-1">Filter by keyword:</span>
+          {[null, ...data.keywords].map((k) => {
+            const on = k === null ? keywordFilters.length === 0 : keywordFilters.includes(normalizeSearchText(k));
+            return (
+              <button
+                key={k ?? "all"}
+                onClick={() => (k === null ? clearKeywords() : toggleKeyword(k))}
+                className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-colors"
+                style={on ? { backgroundColor: "#2ecfba", color: "#fff", borderColor: "#2ecfba" } : { backgroundColor: "#fff", color: "#5b6663", borderColor: "#e7eae8" }}
+              >
+                {k === null ? "All keywords" : `#${k}`}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {(() => {
-        const filteredPubs = data.publicationsRaw.filter((p) => papersFilterMatch(p.type, p.jcr, papersFilters));
+        const textFn = compileTextQuery(query);
+        const filteredPubs = data.publicationsRaw.filter(
+          (p) =>
+            papersFilterMatch(p.type, p.jcr, papersFilters, p.sjr) &&
+            (!textFn || textFn(p.search, { pub: true, type: p.type, jcr: p.jcr, sjr: p.sjr, yearStart: p.year, yearEnd: p.year }))
+        );
+        const pubsFiltered = textFn !== null || papersFilters.length > 0;
+        const shownCitations = pubsFiltered ? filteredPubs.reduce((s, p) => s + p.citations, 0) : data.totalCitations;
+        const shownHIndex = pubsFiltered ? computeHIndex(filteredPubs.map((p) => p.citations)) : data.hIndex;
         const journalsFiltered = filteredPubs.filter((p) => p.type === "Journal");
         const conferencesFiltered = filteredPubs.filter((p) => p.type === "Conference");
 
         const publicationsChart = computeAxisChart(filteredPubs, (p) => p.year, () => 1, pubTypeCategories(), data.years, 90);
         const jcrChart = computeAxisChart(journalsFiltered, (p) => p.year, () => 1, pubJcrCategories(), data.years, 90);
+        const sjrChart = computeAxisChart(journalsFiltered, (p) => p.year, () => 1, pubSjrCategories(), data.years, 90);
         const coreChart = computeAxisChart(conferencesFiltered, (p) => p.year, () => 1, pubCoreCategories(), data.years, 90);
         const publisherCategories = topPublisherCategoriesOf(journalsFiltered, 5);
 
         const pubD = breakdownForYears(publicationsChart, activeYears, computeBreakdown(filteredPubs, pubTypeCategories()), filteredPubs.length);
         const jcrD = breakdownForYears(jcrChart, activeYears, computeBreakdown(journalsFiltered, pubJcrCategories()), journalsFiltered.length);
+        const sjrD = breakdownForYears(sjrChart, activeYears, computeBreakdown(journalsFiltered, pubSjrCategories()), journalsFiltered.length);
         const coreD = breakdownForYears(coreChart, activeYears, computeBreakdown(conferencesFiltered, pubCoreCategories()), conferencesFiltered.length);
         const journalsYearScoped = activeYears.length > 0 ? journalsFiltered.filter((p) => activeYears.includes(p.year)) : journalsFiltered;
         const publisherRows = computeBreakdown(journalsYearScoped, publisherCategories);
@@ -571,7 +662,15 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         const journalList = [...journalCounts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
         return (
-          <Card title="Publications">
+          <Card
+            title="Publications"
+            right={
+              <span title="Google Scholar, including self-citations">
+                {shownCitations.toLocaleString("es-ES")} citations · h-index {shownHIndex}
+                {pubsFiltered ? " (filtered)" : ""}
+              </span>
+            }
+          >
             <PapersFilterBar filters={papersFilters} onToggle={togglePapersFilter} onClear={clearPapersFilters} />
 
             <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 mb-6">
@@ -589,6 +688,15 @@ export default function Dashboard({ data }: { data: DashboardData }) {
                 <Legend items={pubJcrCategories().map((c) => ({ label: c.label, color: c.color }))} />
               </div>
               <DonutBreakdown rows={jcrD.rows} total={jcrD.total} totalLabel={jcrD.totalLabel} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 mb-6 pt-5 border-t border-gray-100">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">Journal quality (SJR)</p>
+                <CountBarChart chart={sjrChart} {...interaction} />
+                <Legend items={pubSjrCategories().map((c) => ({ label: c.label, color: c.color }))} />
+              </div>
+              <DonutBreakdown rows={sjrD.rows} total={sjrD.total} totalLabel={sjrD.totalLabel} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 mb-6 pt-5 border-t border-gray-100">
@@ -625,7 +733,8 @@ export default function Dashboard({ data }: { data: DashboardData }) {
       {(() => {
         const scopes = [...new Set(data.projectsRaw.filter((p) => p.tipo === "Competitive").map((p) => p.scope).filter(Boolean))];
         const baseProjects = ipOnly ? data.projectsRaw.filter((p) => p.isIP) : data.projectsRaw;
-        const filteredProjects = baseProjects.filter((p) => projectsFilterMatch(p.tipo, p.scope, projectsFilters));
+        const tagFn = compileTagQuery(query); // projects carry no titles here: only the topic / keyword filters apply
+        const filteredProjects = baseProjects.filter((p) => projectsFilterMatch(p.tipo, p.scope, projectsFilters) && (!tagFn || tagFn(p.tags, { project: true })));
 
         const typeCats = projectTypeCategories();
         const callCats = callTypeCategoriesOf(scopes);

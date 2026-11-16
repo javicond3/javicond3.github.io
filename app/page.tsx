@@ -19,6 +19,7 @@ import { publications, conferencePublications, bookPublications, otherPublicatio
 import { getCompetitiveProjects, getPrivateContracts, getSoftwareProjects, getWorkingGroups, getProjectsFunding } from "@/data/projects";
 import { getPhDTheses, getMasterTheses, getBachelorTheses, getSupervisions, getExternalCourses, getCourses, getTeachingProjects, getInvitedLectures, getEvents } from "@/data/tutor";
 import { getResearchVisits, getAwards } from "@/data/awards";
+import TopicBadges from "@/components/TopicBadges";
 import { buildSummaryGroups } from "@/utils/buildSummaryGroups";
 
 export default function Home() {
@@ -49,6 +50,7 @@ export default function Home() {
   });
 
   const summaryGroups = buildSummaryGroups({
+    projectsFunding: getProjectsFunding(),
     competitiveProjects: getCompetitiveProjects(),
     privateProjects: getPrivateContracts(),
     journals: publications,
@@ -96,22 +98,7 @@ export default function Home() {
           <BioSection stats={bioStats} />
 
           {/* Badges */}
-          <div className="flex flex-wrap gap-2 pt-1">
-            {[
-              "Artificial Intelligence",
-              "Educational Technology",
-              "Digital Twins",
-              "Linked Open Data",
-              "Edge Computing",
-            ].map((tag) => (
-              <span
-                key={tag}
-                className="px-3 py-1 rounded-full text-xs font-semibold border" style={{ backgroundColor: '#f0fdfa', color: '#2ecfba', borderColor: '#2ecfba' }}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
+          <TopicBadges topics={dashboardData.topics} />
 
           {/* Summary */}
           <div className="pt-1">

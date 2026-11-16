@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FaChevronDown, FaQuoteLeft } from "react-icons/fa";
 import { Publication } from "@/data/publications";
 import EntryBullet, { SelectableProps } from "./EntryBullet";
+import TagChips from "./TagChips";
 import CopyButton from "./CopyButton";
 import { publicationToBibtex } from "@/utils/bibtex";
 import { originalLinkMeta, openAccessLinkMeta, dataRepoLinkMeta, diffusionLinkMeta, LinkMeta } from "@/utils/linkIcons";
@@ -102,7 +103,6 @@ export default function PublicationCard({ publication, selectable }: Props) {
 
   const hasDetails =
     !!publication.abstract ||
-    (publication.keywords && publication.keywords.length > 0) ||
     diffusionLinks.length > 0 ||
     dataRepoLinks.length > 0;
 
@@ -192,6 +192,7 @@ export default function PublicationCard({ publication, selectable }: Props) {
             </button>
           )}
         </p>
+        <TagChips topics={publication.topics} keywords={publication.keywords} className="mt-1.5" />
 
         {/* Expanded details */}
         {open && (
@@ -203,20 +204,6 @@ export default function PublicationCard({ publication, selectable }: Props) {
             )}
             <LinkListRow title="Diffusion" links={diffusionLinks} meta={diffusionLinkMeta} />
             <LinkListRow title="Data & Code" links={dataRepoLinks} meta={dataRepoLinkMeta} />
-            {/* Keywords */}
-            {publication.keywords && publication.keywords.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {publication.keywords.map((kw) => (
-                  <span
-                    key={kw}
-                    className="px-3 py-1 rounded-full text-sm font-medium text-white"
-                    style={{ backgroundColor: "#1c2d2d" }}
-                  >
-                    {kw}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>
